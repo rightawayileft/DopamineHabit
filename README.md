@@ -15,6 +15,21 @@ The app follows the folder structure defined in the product spec. Core logic liv
 
 Run `npm test`.
 
+## Web Deployment
+
+Build the static web app with `npm run build:web`; Expo exports the site to `dist/`.
+
+Preferred hosting is EAS Hosting because this is an Expo Router app. After the EAS project is connected to GitHub, pushes to `main` deploy from the cloud via `.eas/workflows/deploy.yml`.
+
+1. `npx eas-cli@latest login --browser`
+2. `npx eas-cli@latest init`
+3. `npm run build:web`
+4. `npx eas-cli@latest deploy --prod --alias dopaminehabit`
+
+Try `dopaminehabit` first for the shortest public URL. If that alias is taken, try `dopamine-habit`, `dopaminehabitapp`, or `dopamine-habit-app`.
+
+Vercel is also supported via `vercel.json` with `npm run build:web` and `dist`.
+
 ## Phase Status
 
 Phase 1 MVP in progress.

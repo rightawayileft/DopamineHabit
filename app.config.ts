@@ -1,6 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 const config = (_context: ConfigContext): ExpoConfig => ({
+  owner: 'daroruen',
   name: 'DopamineHabit',
   slug: 'dopaminehabit',
   version: '0.1.0',
@@ -32,7 +33,7 @@ const config = (_context: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: 'dopaminehabit-local-dev',
+      projectId: 'b57418e8-25f6-48ab-8302-5945a2c8d8d3',
     },
   },
 });

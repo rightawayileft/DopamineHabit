@@ -1,7 +1,10 @@
 node_modules
 .expo
 .expo-shared
-.eas
+.eas/*
+!.eas/workflows/
+!.eas/workflows/**
+.vercel
 dist
 coverage
 web-build
