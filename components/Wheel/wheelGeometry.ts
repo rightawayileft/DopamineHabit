@@ -5,6 +5,7 @@ export interface WheelSlice {
   kind: WheelSliceKind;
   startAngle: number;
   endAngle: number;
+  centerAngle: number;
 }
 
 export const WHEEL_SLICE_KINDS: WheelSliceKind[] = [
@@ -30,5 +31,31 @@ export const buildWheelSlices = (): WheelSlice[] => {
     kind,
     startAngle: index * sliceSize,
     endAngle: (index + 1) * sliceSize,
+    centerAngle: (index + 0.5) * sliceSize,
   }));
 };
+
+export const wheelSliceColor = (kind: WheelSliceKind): string => {
+  if (kind === 'tier1') return '#FFB84D';
+  if (kind === 'tier2') return '#3DDC97';
+  if (kind === 'tier3') return '#6BE3FF';
+  if (kind === 'jackpot') return '#FF3B6B';
+  return '#B866FF';
+};
+
+export const wheelSliceLabel = (kind: WheelSliceKind): string => {
+  if (kind === 'tier1') return 'T1';
+  if (kind === 'tier2') return 'T2';
+  if (kind === 'tier3') return 'T3';
+  if (kind === 'jackpot') return 'JP';
+  return 'BON';
+};
+
+export const findSliceCenterAngle = (kind: WheelSliceKind): number => {
+  const slice = buildWheelSlices().find((candidate) => candidate.kind === kind);
+
+  return slice?.centerAngle ?? 15;
+};
+
+export const targetRotationForSlice = (kind: WheelSliceKind, baseRotations = 4): number =>
+  baseRotations * 360 - findSliceCenterAngle(kind);
