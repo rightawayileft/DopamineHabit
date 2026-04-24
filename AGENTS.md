@@ -2,6 +2,8 @@
 
 DopamineHabit is a production-grade Expo app for iOS, Android, and web. The source of truth for product behavior is `DOPAMINEHABIT_SPEC_CODEX.md`, and work should stay aligned with the PR-by-PR checkpoints defined there.
 
+Read `ROADMAP.md` before starting a new checkpoint; it records the latest completed PR-sized scope, next recommended work, and cloud handoff status.
+
 ## Commands
 
 - `npm start`

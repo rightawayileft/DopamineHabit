@@ -34,6 +34,8 @@ Vercel is also supported via `vercel.json` with `npm run build:web` and `dist`.
 
 Phase 1 MVP in progress.
 
+See `ROADMAP.md` for completed checkpoints, the next PR-sized scope, and cloud handoff notes.
+
 ## Spec
 
 Source of truth: `DOPAMINEHABIT_SPEC_CODEX.md`
