@@ -1,0 +1,23 @@
+export const colors = {
+  background: '#0B0B14',
+  surface: '#15162A',
+  surfaceElevated: '#1D1E35',
+  primary: '#FFB84D',
+  accentHot: '#FF3B6B',
+  accentCool: '#6BE3FF',
+  success: '#3DDC97',
+  warning: '#FFB84D',
+  danger: '#FF3B6B',
+  textPrimary: '#F5F5FA',
+  textMuted: '#8B8FA3',
+  border: '#2A2B45',
+  tokenColors: {
+    red: '#FF4D5E',
+    orange: '#FF9933',
+    yellow: '#FFD83D',
+    green: '#46D56E',
+    blue: '#3D9BFF',
+    purple: '#B866FF',
+    gold: '#FFD700',
+  },
+} as const;
