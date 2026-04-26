@@ -18,20 +18,21 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR2 onboarding: Naked Rule acceptance plus first jar, habit, reward, and integrity check-in setup.
 - PR3 habit completion: home flow for logging habit reps, rate-limit feedback, token draw, token inventory, persisted completion records, and tests.
 - PR4 cash-in and spin: token cash-in rules, wheel rendering/animation, deterministic pending spin resolution, near-miss fallthrough, persisted spin results, cashed-in token state, and tests.
+- PR5 reward grants and sessions: awarded-tier reward selection with fallback, append-only `RewardGrant` records, persisted `ActiveRewardSession`, reward timer UI, end/early-end behavior, and timer reload tests.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
+- Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR5 should focus on reward grants and reward sessions.
+PR6 should focus on bonus round flow.
 
 Recommended scope:
 
-- Convert eligible `SpinResult` outcomes into append-only `RewardGrant` records.
-- Select the granted reward from the awarded tier, including a clear empty-tier fallback.
-- Start and persist `ActiveRewardSession` with authoritative `expiresAt`.
-- Add reward-active UI using `useTimer`.
-- Add end/early-end behavior and keep reload behavior deterministic.
-- Cover reward grants, timer persistence, and reload behavior with tests.
+- Implement bonus spin chain and persist `BonusChain` lifecycle.
+- Add bonus timer lifecycle and timeout resolution behavior.
+- Convert eligible bonus outcomes into grants while preserving append-only records.
+- Enforce max-chain behavior and deterministic reload continuation.
+- Add tests for bonus chain persistence, timeout behavior, and grant outcomes.
 
 ## Later Checkpoints
 
@@ -47,4 +48,5 @@ Recommended scope:
 - The clean handoff point is GitHub `main`; cloud work should start from the pushed repo state rather than local uncommitted files.
 - If local-to-cloud conversion fails while computing the diff to remote, start a new cloud task from repo `rightawayileft/DopamineHabit`, branch `main`.
 - For the simplest website link, try EAS deploy alias `dopaminehabit` first. Fallback aliases: `dopamine-habit`, `dopaminehabitapp`, `dopamine-habit-app`.
-- Keep `npm run typecheck`, `npm run lint`, `npm test -- --runInBand`, and `npm run build:web` green before handoff.
+- Keep `npm run handoff:cloud` green before handoff.
+- Follow `CLOUD_DEPLOYMENT_HANDOFF.md` for explicit handoff steps and completion criteria.

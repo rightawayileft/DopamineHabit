@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { detectClockTamper, evaluateRateLimit } from '@/game/integrity';
 import { resolveSpin, type ResolvedSpin } from '@/game/probabilities';
+import { selectRewardForSpinResult } from '@/game/rewardGrants';
 import { drawToken } from '@/game/tokenDraw';
 import { createInitialBonusSlice, type BonusSlice } from '@/store/bonus.slice';
 import { createInitialHabitsSlice, type HabitsSlice } from '@/store/habits.slice';
@@ -33,7 +34,7 @@ import type {
   UserSettings,
   UUID,
 } from '@/store/types';
-import { nowIso } from '@/utils/date';
+import { addMinutesToIso, nowIso } from '@/utils/date';
 import { createUuid } from '@/utils/uuid';
 
 export interface AppState
@@ -66,6 +67,9 @@ export interface AppActions {
   resolvePreparedSpin: (spinResultId?: UUID) => SpinResult | undefined;
   grantReward: (grant: RewardGrant) => void;
   setActiveRewardSession: (session: ActiveRewardSession | undefined) => void;
+  endActiveRewardSession: (endedAt?: ISODate) => void;
+  endRewardSessionEarly: (endedEarlyAt?: ISODate) => void;
+  syncRewardSessionState: (timestamp?: ISODate) => void;
   answerIntegrityCheckIn: (answer: 'yes' | 'no' | 'partially', answeredAt?: ISODate) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   markAppSeen: (timestamp?: ISODate) => void;
@@ -173,6 +177,7 @@ const buildSpinResult = (
   pendingSpin: PendingSpinContext,
   id: UUID,
   spunAt: ISODate,
+  awardedRewardId?: UUID,
 ): SpinResult => ({
   id,
   spunAt,
@@ -181,6 +186,7 @@ const buildSpinResult = (
   activatedMaxTier: pendingSpin.activatedMaxTier,
   rawLandedSlice: pendingSpin.resolvedSpin.rawLandedSlice,
   awardedTier: pendingSpin.resolvedSpin.awardedTier,
+  ...(awardedRewardId === undefined ? {} : { awardedRewardId }),
   wasNearMiss: pendingSpin.resolvedSpin.wasNearMiss,
   seed: pendingSpin.resolvedSpin.seed,
 });
@@ -405,19 +411,80 @@ export const useAppStore = create<AppStore>()(
       },
 
       resolvePreparedSpin: (spinResultId = createUuid()) => {
-        const pendingSpin = get().pendingSpin;
+        const state = get();
+        const pendingSpin = state.pendingSpin;
 
         if (!pendingSpin) {
           return undefined;
         }
 
-        const spinResult = buildSpinResult(pendingSpin, spinResultId, nowIso());
-        const nextState = spinResult.rawLandedSlice === 'bonus' ? 'BONUS_ROUND' : 'REWARD_GRANTED';
+        if (pendingSpin.resolvedSpin.rawLandedSlice === 'bonus') {
+          const bonusSpinResult = buildSpinResult(pendingSpin, spinResultId, nowIso());
+
+          set((current) => ({
+            currentState: 'BONUS_ROUND',
+            spinResults: [...current.spinResults, bonusSpinResult],
+            pendingSpin: undefined,
+          }));
+
+          return bonusSpinResult;
+        }
+
+        const selection = selectRewardForSpinResult(state.rewards, pendingSpin.resolvedSpin.awardedTier);
+        const grantId = selection.reward ? createUuid() : undefined;
+        const spinResult = buildSpinResult(
+          pendingSpin,
+          spinResultId,
+          nowIso(),
+          selection.reward?.id,
+        );
+        const grant: RewardGrant | undefined =
+          selection.reward && grantId
+            ? {
+                id: grantId,
+                rewardId: selection.reward.id,
+                grantedAt: spinResult.spunAt,
+                source: 'spin',
+                spinResultId: spinResult.id,
+                ...(selection.reward.durationMinutes === undefined
+                  ? {}
+                  : { durationMinutes: selection.reward.durationMinutes }),
+              }
+            : undefined;
+        const session: ActiveRewardSession | undefined =
+          grant?.durationMinutes && grant.durationMinutes > 0
+            ? {
+                rewardGrantId: grant.id,
+                expiresAt: addMinutesToIso(grant.grantedAt, grant.durationMinutes),
+              }
+            : undefined;
+        const fallbackWarning =
+          selection.strategy === 'fallback_lowest_tier' && selection.reward
+            ? `No reward configured for ${pendingSpin.resolvedSpin.awardedTier}; fell back to ${selection.reward.name}.`
+            : undefined;
+        const noRewardWarning =
+          selection.strategy === 'none_available'
+            ? `No rewards configured for awarded tier ${pendingSpin.resolvedSpin.awardedTier}.`
+            : undefined;
+        const nextState = session ? 'REWARD_ACTIVE' : 'REWARD_GRANTED';
 
         set((state) => ({
           currentState: nextState,
           spinResults: [...state.spinResults, spinResult],
+          rewardGrants: grant ? [...state.rewardGrants, grant] : state.rewardGrants,
+          activeRewardSession: session,
           pendingSpin: undefined,
+          integrityRuntime:
+            fallbackWarning || noRewardWarning
+              ? {
+                  ...state.integrityRuntime,
+                  warnings: [
+                    ...state.integrityRuntime.warnings,
+                    ...(fallbackWarning ? [fallbackWarning] : []),
+                    ...(noRewardWarning ? [noRewardWarning] : []),
+                  ],
+                }
+              : state.integrityRuntime,
         }));
 
         return spinResult;
@@ -434,6 +501,60 @@ export const useAppStore = create<AppStore>()(
           activeRewardSession: session,
           currentState: session ? 'REWARD_ACTIVE' : 'IDLE',
         });
+      },
+
+      endActiveRewardSession: (endedAt = nowIso()) => {
+        const activeRewardSession = get().activeRewardSession;
+
+        if (!activeRewardSession) {
+          return;
+        }
+
+        set((state) => ({
+          activeRewardSession: undefined,
+          currentState: 'IDLE',
+          rewardGrants: state.rewardGrants.map((grant) =>
+            grant.id === activeRewardSession.rewardGrantId && grant.endedAt === undefined
+              ? {
+                  ...grant,
+                  endedAt,
+                }
+              : grant,
+          ),
+        }));
+      },
+
+      endRewardSessionEarly: (endedEarlyAt = nowIso()) => {
+        const activeRewardSession = get().activeRewardSession;
+
+        if (!activeRewardSession) {
+          return;
+        }
+
+        set((state) => ({
+          activeRewardSession: undefined,
+          currentState: 'IDLE',
+          rewardGrants: state.rewardGrants.map((grant) =>
+            grant.id === activeRewardSession.rewardGrantId && grant.endedEarlyAt === undefined
+              ? {
+                  ...grant,
+                  endedEarlyAt,
+                }
+              : grant,
+          ),
+        }));
+      },
+
+      syncRewardSessionState: (timestamp = nowIso()) => {
+        const activeRewardSession = get().activeRewardSession;
+
+        if (!activeRewardSession) {
+          return;
+        }
+
+        if (activeRewardSession.expiresAt.localeCompare(timestamp) <= 0) {
+          get().endActiveRewardSession(timestamp);
+        }
       },
 
       answerIntegrityCheckIn: (answer, answeredAt = nowIso()) => {

@@ -21,6 +21,12 @@ Build the static web app with `npm run build:web`; Expo exports the site to `dis
 
 Preferred hosting is EAS Hosting because this is an Expo Router app. After the EAS project is connected to GitHub, pushes to `main` deploy from the cloud via `.eas/workflows/deploy.yml`.
 
+Run the full cloud-handoff verification gate locally before pushing:
+
+```bash
+npm run handoff:cloud
+```
+
 1. `npx eas-cli@latest login --browser`
 2. `npx eas-cli@latest init`
 3. `npm run build:web`
@@ -29,6 +35,8 @@ Preferred hosting is EAS Hosting because this is an Expo Router app. After the E
 Try `dopaminehabit` first for the shortest public URL. If that alias is taken, try `dopamine-habit`, `dopaminehabitapp`, or `dopamine-habit-app`.
 
 Vercel is also supported via `vercel.json` with `npm run build:web` and `dist`.
+
+For a complete cloud runbook, see `CLOUD_DEPLOYMENT_HANDOFF.md`.
 
 ## Phase Status
 

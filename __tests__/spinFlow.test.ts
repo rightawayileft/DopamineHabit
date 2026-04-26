@@ -16,6 +16,19 @@ const findNearMissSeed = (): string => {
   throw new Error('Unable to find near-miss seed.');
 };
 
+const findTierTwoAwardSeed = (): string => {
+  for (let index = 0; index < 100_000; index += 1) {
+    const seed = `tier-two-${index}`;
+    const spin = resolveSpin({ activatedMaxTier: 2, seed });
+
+    if (spin.awardedTier === 2) {
+      return seed;
+    }
+  }
+
+  throw new Error('Unable to find tier-two seed.');
+};
+
 const createReadyCompletion = () => {
   useAppStore.getState().acceptNakedRule('2026-04-23T13:00:00Z');
   const { habit } = useAppStore.getState().createInitialOnboardingSetup({
@@ -67,8 +80,11 @@ describe('spin flow', () => {
       wasNearMiss: true,
       seed,
     });
+    expect(result?.awardedRewardId).toBeDefined();
     expect(useAppStore.getState().spinResults).toHaveLength(1);
-    expect(useAppStore.getState().currentState).toBe('REWARD_GRANTED');
+    expect(useAppStore.getState().rewardGrants).toHaveLength(1);
+    expect(useAppStore.getState().activeRewardSession).toBeDefined();
+    expect(useAppStore.getState().currentState).toBe('REWARD_ACTIVE');
   });
 
   it('marks cashed-in tokens when preparing a spin', () => {
@@ -107,5 +123,33 @@ describe('spin flow', () => {
 
     expect(cashedInTokens).toHaveLength(2);
     expect(cashedInTokens.every((token) => token.state === 'cashed_in')).toBe(true);
+  });
+
+  it('falls back to the lowest-tier reward when no matching tier reward exists', () => {
+    const { completion } = createReadyCompletion();
+    const seed = findTierTwoAwardSeed();
+    useAppStore.setState((state) => ({
+      rewards: state.rewards.map((reward) =>
+        reward.tier === 1
+          ? reward
+          : {
+              ...reward,
+              tier: 3,
+            },
+      ),
+    }));
+
+    useAppStore.getState().prepareSpin({
+      habitCompletionId: completion.id,
+      activatedMaxTier: 2,
+      seed,
+    });
+    const result = useAppStore.getState().resolvePreparedSpin('spin-result-fallback');
+
+    expect(result?.awardedTier).toBe(2);
+    expect(result?.awardedRewardId).toBe(useAppStore.getState().rewards[0]?.id);
+    expect(useAppStore.getState().integrityRuntime.warnings).toContainEqual(
+      expect.stringContaining('No reward configured for 2'),
+    );
   });
 });

@@ -21,6 +21,7 @@ export default function SpinScreen() {
   const tokens = useAppStore((state) => state.tokens);
   const pendingSpin = useAppStore((state) => state.pendingSpin);
   const spinResults = useAppStore((state) => state.spinResults);
+  const rewards = useAppStore((state) => state.rewards);
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
   const prepareSpin = useAppStore((state) => state.prepareSpin);
@@ -60,11 +61,16 @@ export default function SpinScreen() {
     }
 
     const lockedSlice = result.wasNearMiss ? result.rawLandedSlice : undefined;
+    const awardedReward = result.awardedRewardId
+      ? rewards.find((reward) => reward.id === result.awardedRewardId)
+      : undefined;
     setLastLockedSlice(lockedSlice === 'tier2' || lockedSlice === 'tier3' ? lockedSlice : undefined);
     setSpinMessage(
       result.wasNearMiss
         ? `Near miss: landed on locked ${result.rawLandedSlice}, awarded Tier 1.`
-        : `Awarded ${result.awardedTier}.`,
+        : awardedReward
+          ? `Awarded ${result.awardedTier}: ${awardedReward.name}.`
+          : `Awarded ${result.awardedTier}.`,
     );
     soundManager.setEnabled(soundEnabled);
     void soundManager.play(result.wasNearMiss ? 'nearMiss' : 'spinSettle');

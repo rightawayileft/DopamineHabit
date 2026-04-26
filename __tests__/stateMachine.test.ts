@@ -100,4 +100,41 @@ describe('app state machine', () => {
       '2026-04-23T12:10:00Z',
     );
   });
+
+  it('deterministically ends expired reward sessions after reload sync', () => {
+    useAppStore.setState({
+      rewardGrants: [
+        {
+          id: 'grant-1',
+          rewardId: 'reward-1',
+          grantedAt: '2026-04-23T12:00:00Z',
+          source: 'spin',
+          spinResultId: 'spin-1',
+          durationMinutes: 10,
+        },
+      ],
+      activeRewardSession: {
+        rewardGrantId: 'grant-1',
+        expiresAt: '2026-04-23T12:10:00Z',
+      },
+      currentState: 'REWARD_ACTIVE',
+    });
+
+    const persistedBeforeRestart = readPersistedJsonForTests<PersistedEnvelope>(
+      APP_STORE_STORAGE_KEY,
+    );
+    useAppStore.getState().resetForTests();
+
+    if (!persistedBeforeRestart) {
+      throw new Error('Expected persisted reward timer state before restart.');
+    }
+
+    writePersistedJsonForTests(APP_STORE_STORAGE_KEY, persistedBeforeRestart);
+    useAppStore.getState().rehydrateFromStorageForTests();
+    useAppStore.getState().syncRewardSessionState('2026-04-23T12:10:01Z');
+
+    expect(useAppStore.getState().activeRewardSession).toBeUndefined();
+    expect(useAppStore.getState().currentState).toBe('IDLE');
+    expect(useAppStore.getState().rewardGrants[0]?.endedAt).toBe('2026-04-23T12:10:01Z');
+  });
 });
