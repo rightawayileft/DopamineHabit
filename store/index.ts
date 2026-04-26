@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { bonusDiscountPercent, resolveBonusAward } from '@/game/bonus';
+import { BONUS_CHAIN_MAX, BONUS_TIMER_MINUTES } from '@/game/constants';
 import { detectClockTamper, evaluateRateLimit } from '@/game/integrity';
 import { resolveSpin, type ResolvedSpin } from '@/game/probabilities';
 import { selectRewardForSpinResult } from '@/game/rewardGrants';
@@ -21,6 +23,8 @@ import { createInitialTokensSlice, type TokensSlice } from '@/store/tokens.slice
 import type {
   ActiveRewardSession,
   AppMachineState,
+  BonusChain,
+  BonusSpin,
   CompletionFeedback,
   Habit,
   HabitCompletion,
@@ -56,6 +60,18 @@ export interface AppActions {
   addJar: (jar: Jar) => void;
   addHabit: (habit: Habit) => void;
   addReward: (reward: Reward) => void;
+  createJar: (input: CreateJarInput) => Jar | undefined;
+  updateJar: (input: UpdateJarInput) => Jar | undefined;
+  archiveJar: (jarId: UUID, archivedAt?: ISODate) => void;
+  restoreJar: (jarId: UUID) => void;
+  createHabit: (input: CreateHabitInput) => Habit | undefined;
+  updateHabit: (input: UpdateHabitInput) => Habit | undefined;
+  archiveHabit: (habitId: UUID, archivedAt?: ISODate) => void;
+  restoreHabit: (habitId: UUID) => void;
+  createReward: (input: CreateRewardInput) => Reward | undefined;
+  updateReward: (input: UpdateRewardInput) => Reward | undefined;
+  archiveReward: (rewardId: UUID, archivedAt?: ISODate) => void;
+  restoreReward: (rewardId: UUID) => void;
   acceptNakedRule: (acceptedAt?: ISODate) => void;
   createInitialOnboardingSetup: (input: InitialOnboardingSetupInput) => {
     jar: Jar;
@@ -65,6 +81,9 @@ export interface AppActions {
   logHabitCompletion: (input: LogHabitCompletionInput) => HabitCompletion | undefined;
   prepareSpin: (input: PrepareSpinInput) => PendingSpinContext | undefined;
   resolvePreparedSpin: (spinResultId?: UUID) => SpinResult | undefined;
+  startBonusSpin: (input?: StartBonusSpinInput) => BonusSpin | undefined;
+  completeBonusTimer: (input: CompleteBonusTimerInput) => HabitCompletion | undefined;
+  syncBonusChainState: (timestamp?: ISODate) => void;
   grantReward: (grant: RewardGrant) => void;
   setActiveRewardSession: (session: ActiveRewardSession | undefined) => void;
   endActiveRewardSession: (endedAt?: ISODate) => void;
@@ -92,6 +111,71 @@ export interface PrepareSpinInput {
   activatedMaxTier: 1 | 2 | 3;
   seed?: string;
   startedAt?: ISODate;
+}
+
+export interface StartBonusSpinInput {
+  seed?: string;
+  startedAt?: ISODate;
+  bonusSpinId?: UUID;
+}
+
+export interface CompleteBonusTimerInput {
+  habitId: UUID;
+  completedAt?: ISODate;
+  tokenSeed?: string;
+  bonusTokenSeed?: string;
+  completionId?: UUID;
+  tokenId?: UUID;
+  bonusTokenId?: UUID;
+  rewardGrantId?: UUID;
+}
+
+export interface CreateJarInput {
+  id?: UUID;
+  name: string;
+  colorHex: string;
+  funMoneyEnabled?: boolean;
+  funMoneyPerTokenCents?: number;
+  createdAt?: ISODate;
+}
+
+export interface UpdateJarInput {
+  id: UUID;
+  name?: string;
+  colorHex?: string;
+  funMoneyEnabled?: boolean;
+  funMoneyPerTokenCents?: number;
+}
+
+export interface CreateHabitInput {
+  id?: UUID;
+  name: string;
+  cue?: string;
+  jarId: UUID;
+  createdAt?: ISODate;
+}
+
+export interface UpdateHabitInput {
+  id: UUID;
+  name?: string;
+  cue?: string;
+  jarId?: UUID;
+}
+
+export interface CreateRewardInput {
+  id?: UUID;
+  name: string;
+  tier: Reward['tier'];
+  durationMinutes?: number;
+  description?: string;
+}
+
+export interface UpdateRewardInput {
+  id: UUID;
+  name?: string;
+  tier?: Reward['tier'];
+  durationMinutes?: number;
+  description?: string;
 }
 
 export interface InitialOnboardingSetupInput {
@@ -191,6 +275,79 @@ const buildSpinResult = (
   seed: pendingSpin.resolvedSpin.seed,
 });
 
+const findActiveBonusChain = (state: AppState): BonusChain | undefined =>
+  state.activeBonusChainId
+    ? state.bonusChains.find((chain) => chain.id === state.activeBonusChainId)
+    : undefined;
+
+const latestBonusSpin = (chain: BonusChain): BonusSpin | undefined =>
+  chain.spins[chain.spins.length - 1];
+
+const isAtOrAfter = (timestamp: ISODate, target: ISODate): boolean =>
+  new Date(timestamp).getTime() >= new Date(target).getTime();
+
+const optionalTrimmed = (value: string | undefined): string | undefined => {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : undefined;
+};
+
+const activeJarById = (jars: Jar[], jarId: UUID): Jar | undefined =>
+  jars.find((jar) => jar.id === jarId && !jar.archivedAt);
+
+const createBonusToken = ({
+  award,
+  bonusTokenId,
+  bonusTokenSeed,
+  completedAt,
+  completionId,
+  existingGoldenCount,
+  jarId,
+}: {
+  award: BonusSpin['bonusAwardLanded'];
+  bonusTokenId: UUID;
+  bonusTokenSeed?: string;
+  completedAt: ISODate;
+  completionId: UUID;
+  existingGoldenCount: number;
+  jarId: UUID;
+}): Token | undefined => {
+  if (award === 'free_golden') {
+    const fallbackToken = drawToken({
+      ...(bonusTokenSeed === undefined ? {} : { seed: bonusTokenSeed }),
+      existingGoldenCount,
+    });
+    const color = existingGoldenCount >= 3 ? fallbackToken.color : 'gold';
+
+    return {
+      id: bonusTokenId,
+      color,
+      earnedAt: completedAt,
+      sourceCompletionId: completionId,
+      state: 'in_inventory',
+      jarId,
+    };
+  }
+
+  if (award !== 'free_token') {
+    return undefined;
+  }
+
+  const tokenDraw = drawToken({
+    ...(bonusTokenSeed === undefined ? {} : { seed: bonusTokenSeed }),
+    existingGoldenCount,
+  });
+
+  return {
+    id: bonusTokenId,
+    color: tokenDraw.color,
+    earnedAt: completedAt,
+    sourceCompletionId: completionId,
+    state: 'in_inventory',
+    jarId,
+  };
+};
+
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
@@ -222,6 +379,264 @@ export const useAppStore = create<AppStore>()(
       addReward: (reward) => {
         set((state) => ({
           rewards: [...state.rewards, reward],
+        }));
+      },
+
+      createJar: ({
+        id = createUuid(),
+        name,
+        colorHex,
+        funMoneyEnabled = false,
+        funMoneyPerTokenCents = 50,
+        createdAt = nowIso(),
+      }) => {
+        const trimmedName = optionalTrimmed(name);
+
+        if (!trimmedName) {
+          return undefined;
+        }
+
+        const jar: Jar = {
+          id,
+          name: trimmedName,
+          colorHex,
+          milestones: [],
+          funMoneyEnabled,
+          funMoneyPerTokenCents,
+          funMoneyBalanceCents: 0,
+          createdAt,
+        };
+
+        set((state) => ({
+          jars: [...state.jars, jar],
+        }));
+
+        return jar;
+      },
+
+      updateJar: ({ id, name, colorHex, funMoneyEnabled, funMoneyPerTokenCents }) => {
+        const existingJar = get().jars.find((jar) => jar.id === id);
+
+        if (!existingJar) {
+          return undefined;
+        }
+
+        const trimmedName = name === undefined ? existingJar.name : optionalTrimmed(name);
+
+        if (!trimmedName) {
+          return undefined;
+        }
+
+        const updatedJar: Jar = {
+          ...existingJar,
+          name: trimmedName,
+          colorHex: colorHex ?? existingJar.colorHex,
+          funMoneyEnabled: funMoneyEnabled ?? existingJar.funMoneyEnabled,
+          funMoneyPerTokenCents:
+            funMoneyPerTokenCents ?? existingJar.funMoneyPerTokenCents,
+        };
+
+        set((state) => ({
+          jars: state.jars.map((jar) => (jar.id === id ? updatedJar : jar)),
+        }));
+
+        return updatedJar;
+      },
+
+      archiveJar: (jarId, archivedAt = nowIso()) => {
+        set((state) => ({
+          jars: state.jars.map((jar) =>
+            jar.id === jarId && !jar.archivedAt
+              ? {
+                  ...jar,
+                  archivedAt,
+                }
+              : jar,
+          ),
+        }));
+      },
+
+      restoreJar: (jarId) => {
+        set((state) => ({
+          jars: state.jars.map((jar) => {
+            if (jar.id !== jarId) {
+              return jar;
+            }
+
+            const { archivedAt: _archivedAt, ...restoredJar } = jar;
+            return restoredJar;
+          }),
+        }));
+      },
+
+      createHabit: ({ id = createUuid(), name, cue, jarId, createdAt = nowIso() }) => {
+        const trimmedName = optionalTrimmed(name);
+        const trimmedCue = optionalTrimmed(cue);
+
+        if (!trimmedName || !activeJarById(get().jars, jarId)) {
+          return undefined;
+        }
+
+        const habit: Habit = {
+          id,
+          name: trimmedName,
+          ...(trimmedCue ? { cue: trimmedCue } : {}),
+          jarId,
+          createdAt,
+        };
+
+        set((state) => ({
+          habits: [...state.habits, habit],
+        }));
+
+        return habit;
+      },
+
+      updateHabit: ({ id, name, cue, jarId }) => {
+        const existingHabit = get().habits.find((habit) => habit.id === id);
+
+        if (!existingHabit) {
+          return undefined;
+        }
+
+        const nextJarId = jarId ?? existingHabit.jarId;
+        const trimmedName = name === undefined ? existingHabit.name : optionalTrimmed(name);
+
+        if (!trimmedName || !activeJarById(get().jars, nextJarId)) {
+          return undefined;
+        }
+
+        const trimmedCue = cue === undefined ? existingHabit.cue : optionalTrimmed(cue);
+        const updatedHabit: Habit = {
+          ...existingHabit,
+          name: trimmedName,
+          jarId: nextJarId,
+          ...(trimmedCue ? { cue: trimmedCue } : {}),
+        };
+
+        if (!trimmedCue && 'cue' in updatedHabit) {
+          delete updatedHabit.cue;
+        }
+
+        set((state) => ({
+          habits: state.habits.map((habit) => (habit.id === id ? updatedHabit : habit)),
+        }));
+
+        return updatedHabit;
+      },
+
+      archiveHabit: (habitId, archivedAt = nowIso()) => {
+        set((state) => ({
+          habits: state.habits.map((habit) =>
+            habit.id === habitId && !habit.archivedAt
+              ? {
+                  ...habit,
+                  archivedAt,
+                }
+              : habit,
+          ),
+        }));
+      },
+
+      restoreHabit: (habitId) => {
+        set((state) => ({
+          habits: state.habits.map((habit) => {
+            if (habit.id !== habitId) {
+              return habit;
+            }
+
+            const { archivedAt: _archivedAt, ...restoredHabit } = habit;
+            return restoredHabit;
+          }),
+        }));
+      },
+
+      createReward: ({ id = createUuid(), name, tier, durationMinutes, description }) => {
+        const trimmedName = optionalTrimmed(name);
+        const trimmedDescription = optionalTrimmed(description);
+
+        if (!trimmedName) {
+          return undefined;
+        }
+
+        const reward: Reward = {
+          id,
+          name: trimmedName,
+          tier,
+          ...(durationMinutes === undefined ? {} : { durationMinutes }),
+          ...(trimmedDescription ? { description: trimmedDescription } : {}),
+        };
+
+        set((state) => ({
+          rewards: [...state.rewards, reward],
+        }));
+
+        return reward;
+      },
+
+      updateReward: ({ id, name, tier, durationMinutes, description }) => {
+        const existingReward = get().rewards.find((reward) => reward.id === id);
+
+        if (!existingReward) {
+          return undefined;
+        }
+
+        const trimmedName = name === undefined ? existingReward.name : optionalTrimmed(name);
+
+        if (!trimmedName) {
+          return undefined;
+        }
+
+        const trimmedDescription =
+          description === undefined ? existingReward.description : optionalTrimmed(description);
+        const updatedReward: Reward = {
+          ...existingReward,
+          name: trimmedName,
+          tier: tier ?? existingReward.tier,
+          ...(durationMinutes === undefined
+            ? existingReward.durationMinutes === undefined
+              ? {}
+              : { durationMinutes: existingReward.durationMinutes }
+            : { durationMinutes }),
+          ...(trimmedDescription ? { description: trimmedDescription } : {}),
+        };
+
+        if (!trimmedDescription && 'description' in updatedReward) {
+          delete updatedReward.description;
+        }
+
+        set((state) => ({
+          rewards: state.rewards.map((reward) =>
+            reward.id === id ? updatedReward : reward,
+          ),
+        }));
+
+        return updatedReward;
+      },
+
+      archiveReward: (rewardId, archivedAt = nowIso()) => {
+        set((state) => ({
+          rewards: state.rewards.map((reward) =>
+            reward.id === rewardId && !reward.archivedAt
+              ? {
+                  ...reward,
+                  archivedAt,
+                }
+              : reward,
+          ),
+        }));
+      },
+
+      restoreReward: (rewardId) => {
+        set((state) => ({
+          rewards: state.rewards.map((reward) => {
+            if (reward.id !== rewardId) {
+              return reward;
+            }
+
+            const { archivedAt: _archivedAt, ...restoredReward } = reward;
+            return restoredReward;
+          }),
         }));
       },
 
@@ -286,20 +701,24 @@ export const useAppStore = create<AppStore>()(
         const state = get();
         const habit = state.habits.find((candidate) => candidate.id === habitId);
 
-        if (!habit) {
+        const habitJar = habit ? state.jars.find((jar) => jar.id === habit.jarId) : undefined;
+
+        if (!habit || habit.archivedAt || habitJar?.archivedAt) {
           const occurredAt = completedAt;
           set((current) => ({
             lastCompletionFeedback: {
               status: 'unknown_habit',
               habitId,
               occurredAt,
-              message: 'That habit could not be found.',
+              message: habit?.archivedAt ? 'That habit is archived.' : 'That habit could not be found.',
             },
             integrityRuntime: {
               ...current.integrityRuntime,
               warnings: [
                 ...current.integrityRuntime.warnings,
-                `Unknown habit completion ignored: ${habitId}`,
+                habit?.archivedAt
+                  ? `Archived habit completion ignored: ${habitId}`
+                  : `Unknown habit completion ignored: ${habitId}`,
               ],
             },
           }));
@@ -419,11 +838,21 @@ export const useAppStore = create<AppStore>()(
         }
 
         if (pendingSpin.resolvedSpin.rawLandedSlice === 'bonus') {
-          const bonusSpinResult = buildSpinResult(pendingSpin, spinResultId, nowIso());
+          const spunAt = nowIso();
+          const bonusSpinResult = buildSpinResult(pendingSpin, spinResultId, spunAt);
+          const bonusChain: BonusChain = {
+            id: createUuid(),
+            startedAt: spunAt,
+            originatingSpinResultId: bonusSpinResult.id,
+            spins: [],
+            outcome: 'in_progress',
+          };
 
           set((current) => ({
             currentState: 'BONUS_ROUND',
             spinResults: [...current.spinResults, bonusSpinResult],
+            bonusChains: [...current.bonusChains, bonusChain],
+            activeBonusChainId: bonusChain.id,
             pendingSpin: undefined,
           }));
 
@@ -488,6 +917,300 @@ export const useAppStore = create<AppStore>()(
         }));
 
         return spinResult;
+      },
+
+      startBonusSpin: ({
+        seed,
+        startedAt = nowIso(),
+        bonusSpinId = createUuid(),
+      } = {}) => {
+        const state = get();
+        const activeBonusChain = findActiveBonusChain(state);
+
+        if (!activeBonusChain || activeBonusChain.outcome !== 'in_progress') {
+          return undefined;
+        }
+
+        if (activeBonusChain.spins.length >= BONUS_CHAIN_MAX) {
+          set((current) => ({
+            activeBonusChainId: undefined,
+            currentState: 'IDLE',
+            bonusChains: current.bonusChains.map((chain) =>
+              chain.id === activeBonusChain.id
+                ? {
+                    ...chain,
+                    endedAt: startedAt,
+                    outcome: 'max_chain',
+                  }
+                : chain,
+            ),
+          }));
+          return undefined;
+        }
+
+        const resolvedAward = resolveBonusAward(seed === undefined ? {} : { seed });
+        const bonusSpin: BonusSpin = {
+          id: bonusSpinId,
+          seed: resolvedAward.seed,
+          bonusAwardLanded: resolvedAward.bonusAwardLanded,
+          timerStartedAt: startedAt,
+          timerExpiresAt: addMinutesToIso(startedAt, BONUS_TIMER_MINUTES),
+        };
+
+        set((current) => ({
+          currentState: 'BONUS_TIMER_ACTIVE',
+          bonusChains: current.bonusChains.map((chain) =>
+            chain.id === activeBonusChain.id
+              ? {
+                  ...chain,
+                  spins: [...chain.spins, bonusSpin],
+                }
+              : chain,
+          ),
+        }));
+
+        return bonusSpin;
+      },
+
+      completeBonusTimer: ({
+        habitId,
+        completedAt = nowIso(),
+        tokenSeed,
+        bonusTokenSeed,
+        completionId = createUuid(),
+        tokenId = createUuid(),
+        bonusTokenId = createUuid(),
+        rewardGrantId = createUuid(),
+      }) => {
+        const state = get();
+        const activeBonusChain = findActiveBonusChain(state);
+        const activeBonusSpin = activeBonusChain ? latestBonusSpin(activeBonusChain) : undefined;
+
+        if (
+          !activeBonusChain ||
+          activeBonusChain.outcome !== 'in_progress' ||
+          !activeBonusSpin ||
+          activeBonusSpin.completedCompletionId
+        ) {
+          return undefined;
+        }
+
+        if (isAtOrAfter(completedAt, activeBonusSpin.timerExpiresAt)) {
+          get().syncBonusChainState(completedAt);
+          return undefined;
+        }
+
+        const habit = state.habits.find((candidate) => candidate.id === habitId);
+
+        const habitJar = habit ? state.jars.find((jar) => jar.id === habit.jarId) : undefined;
+
+        if (!habit || habit.archivedAt || habitJar?.archivedAt) {
+          set((current) => ({
+            lastCompletionFeedback: {
+              status: 'unknown_habit',
+              habitId,
+              occurredAt: completedAt,
+              message: habit?.archivedAt ? 'That habit is archived.' : 'That habit could not be found.',
+            },
+            integrityRuntime: {
+              ...current.integrityRuntime,
+              warnings: [
+                ...current.integrityRuntime.warnings,
+                habit?.archivedAt
+                  ? `Archived bonus habit completion ignored: ${habitId}`
+                  : `Unknown bonus habit completion ignored: ${habitId}`,
+              ],
+            },
+          }));
+          return undefined;
+        }
+
+        const latestCompletion = latestCompletionForHabit(state.completions, habitId);
+        const rateLimitSeconds = state.settings.rateLimitSecondsPerHabit[habitId] ?? 30;
+        const rateLimit = evaluateRateLimit(
+          latestCompletion?.completedAt,
+          completedAt,
+          rateLimitSeconds,
+        );
+
+        if (!rateLimit.allowed) {
+          set((current) => ({
+            lastCompletionFeedback: {
+              status: 'rate_limited',
+              habitId,
+              occurredAt: completedAt,
+              secondsRemaining: rateLimit.secondsRemaining,
+              message: `Wait ${rateLimit.secondsRemaining}s before claiming this bonus.`,
+            },
+            integrityRuntime: {
+              ...current.integrityRuntime,
+              warnings: [
+                ...current.integrityRuntime.warnings,
+                `Bonus habit ${habitId} rate-limited for ${rateLimit.secondsRemaining}s.`,
+              ],
+            },
+          }));
+          return undefined;
+        }
+
+        const existingGoldenCount = state.tokens.filter(
+          (token) => token.color === 'gold' && token.state === 'in_inventory',
+        ).length;
+        const tokenDraw = drawToken({
+          ...(tokenSeed === undefined ? {} : { seed: tokenSeed }),
+          existingGoldenCount,
+        });
+        const bonusDiscountApplied = bonusDiscountPercent(activeBonusSpin.bonusAwardLanded);
+        const completion: HabitCompletion = {
+          id: completionId,
+          habitId,
+          completedAt,
+          tokenDrawnId: tokenId,
+          wasBonusRep: true,
+          ...(bonusDiscountApplied === undefined ? {} : { bonusDiscountApplied }),
+        };
+        const token: Token = {
+          id: tokenId,
+          color: tokenDraw.color,
+          earnedAt: completedAt,
+          sourceCompletionId: completion.id,
+          state: 'in_inventory',
+          jarId: habit.jarId,
+        };
+        const bonusToken = createBonusToken({
+          award: activeBonusSpin.bonusAwardLanded,
+          bonusTokenId,
+          ...(bonusTokenSeed === undefined ? {} : { bonusTokenSeed }),
+          completedAt,
+          completionId: completion.id,
+          existingGoldenCount: existingGoldenCount + (token.color === 'gold' ? 1 : 0),
+          jarId: habit.jarId,
+        });
+        const shouldContinueChain =
+          activeBonusSpin.bonusAwardLanded === 'extra_spin' &&
+          activeBonusChain.spins.length < BONUS_CHAIN_MAX;
+        const rewardSelection = shouldContinueChain
+          ? undefined
+          : selectRewardForSpinResult(state.rewards, 1);
+        const bonusRewardGrant: RewardGrant | undefined = rewardSelection?.reward
+          ? {
+              id: rewardGrantId,
+              rewardId: rewardSelection.reward.id,
+              grantedAt: completedAt,
+              source: 'bonus',
+              bonusChainId: activeBonusChain.id,
+              ...(rewardSelection.reward.durationMinutes === undefined
+                ? {}
+                : { durationMinutes: rewardSelection.reward.durationMinutes }),
+            }
+          : undefined;
+        const activeRewardSession: ActiveRewardSession | undefined =
+          bonusRewardGrant?.durationMinutes && bonusRewardGrant.durationMinutes > 0
+            ? {
+                rewardGrantId: bonusRewardGrant.id,
+                expiresAt: addMinutesToIso(
+                  bonusRewardGrant.grantedAt,
+                  bonusRewardGrant.durationMinutes,
+                ),
+              }
+            : undefined;
+        const completedBonusSpin: BonusSpin = {
+          ...activeBonusSpin,
+          completedCompletionId: completion.id,
+          ...(bonusRewardGrant ? { rewardGrantId: bonusRewardGrant.id } : {}),
+          ...(bonusToken ? { grantedTokenId: bonusToken.id } : {}),
+        };
+        const completedSpins = activeBonusChain.spins.map((spin) =>
+          spin.id === activeBonusSpin.id ? completedBonusSpin : spin,
+        );
+        const completedBonusChain: BonusChain = shouldContinueChain
+          ? {
+              ...activeBonusChain,
+              spins: completedSpins,
+            }
+          : {
+              ...activeBonusChain,
+              endedAt: completedAt,
+              spins: completedSpins,
+              outcome:
+                activeBonusSpin.bonusAwardLanded === 'extra_spin' ? 'max_chain' : 'completed',
+            };
+        const noRewardWarning =
+          !shouldContinueChain && !bonusRewardGrant
+            ? 'No Tier 1 reward configured for completed bonus chain.'
+            : undefined;
+
+        set((current) => ({
+          currentState: shouldContinueChain
+            ? 'BONUS_ROUND'
+            : activeRewardSession
+              ? 'REWARD_ACTIVE'
+              : bonusRewardGrant
+                ? 'REWARD_GRANTED'
+                : 'IDLE',
+          completions: [...current.completions, completion],
+          tokens: [...current.tokens, token, ...(bonusToken ? [bonusToken] : [])],
+          rewardGrants: bonusRewardGrant
+            ? [...current.rewardGrants, bonusRewardGrant]
+            : current.rewardGrants,
+          activeRewardSession,
+          activeBonusChainId: shouldContinueChain ? activeBonusChain.id : undefined,
+          bonusChains: current.bonusChains.map((chain) =>
+            chain.id === activeBonusChain.id ? completedBonusChain : chain,
+          ),
+          lastCompletionFeedback: {
+            status: 'completed',
+            habitId,
+            occurredAt: completedAt,
+            completionId: completion.id,
+            tokenId: token.id,
+            tokenColor: token.color,
+            message: bonusToken
+              ? `Bonus rep claimed: ${token.color} plus ${bonusToken.color}.`
+              : `Bonus rep claimed: ${token.color}.`,
+          },
+          integrityRuntime: noRewardWarning
+            ? {
+                ...current.integrityRuntime,
+                warnings: [...current.integrityRuntime.warnings, noRewardWarning],
+              }
+            : current.integrityRuntime,
+        }));
+
+        return completion;
+      },
+
+      syncBonusChainState: (timestamp = nowIso()) => {
+        const activeBonusChain = findActiveBonusChain(get());
+        const activeBonusSpin = activeBonusChain ? latestBonusSpin(activeBonusChain) : undefined;
+
+        if (
+          !activeBonusChain ||
+          activeBonusChain.outcome !== 'in_progress' ||
+          !activeBonusSpin ||
+          activeBonusSpin.completedCompletionId ||
+          !isAtOrAfter(timestamp, activeBonusSpin.timerExpiresAt)
+        ) {
+          return;
+        }
+
+        set((state) => ({
+          activeBonusChainId: undefined,
+          currentState: 'IDLE',
+          bonusChains: state.bonusChains.map((chain) =>
+            chain.id === activeBonusChain.id
+              ? {
+                  ...chain,
+                  endedAt: timestamp,
+                  outcome: 'timed_out',
+                }
+              : chain,
+          ),
+          integrityRuntime: {
+            ...state.integrityRuntime,
+            warnings: [...state.integrityRuntime.warnings, 'Bonus timer expired.'],
+          },
+        }));
       },
 
       grantReward: (grant) => {

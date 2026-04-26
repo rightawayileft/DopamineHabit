@@ -2,6 +2,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 
 import { soundManager } from '@/audio/SoundManager';
+import { HabitForm } from '@/components/management/ManagementForms';
 import { TokenInventory } from '@/components/TokenInventory';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -22,6 +23,9 @@ export default function HabitDetailScreen() {
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
   const logHabitCompletion = useAppStore((state) => state.logHabitCompletion);
+  const updateHabit = useAppStore((state) => state.updateHabit);
+  const archiveHabit = useAppStore((state) => state.archiveHabit);
+  const restoreHabit = useAppStore((state) => state.restoreHabit);
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -34,10 +38,12 @@ export default function HabitDetailScreen() {
   }
 
   const jar = jars.find((candidate) => candidate.id === habit.jarId);
+  const activeJars = jars.filter((candidate) => !candidate.archivedAt);
   const habitCompletions = completions.filter((completion) => completion.habitId === habit.id);
   const inventoryTokens = tokens.filter(
     (token) => token.jarId === habit.jarId && token.state === 'in_inventory',
   );
+  const canCompleteHabit = !habit.archivedAt && !jar?.archivedAt;
 
   const completeHabit = () => {
     const completion = logHabitCompletion({ habitId: habit.id });
@@ -59,7 +65,8 @@ export default function HabitDetailScreen() {
         <Text variant="display">{habit.name}</Text>
         {habit.cue ? <Text muted>{habit.cue}</Text> : null}
         <Text muted>Jar: {jar?.name ?? 'Unknown jar'}</Text>
-        <Button label="Done" onPress={completeHabit} />
+        {habit.archivedAt ? <Text muted>Archived at {habit.archivedAt}</Text> : null}
+        <Button disabled={!canCompleteHabit} label="Done" onPress={completeHabit} />
       </Card>
       {lastCompletionFeedback?.habitId === habit.id ? (
         <Card>
@@ -69,6 +76,25 @@ export default function HabitDetailScreen() {
           <Text muted>{lastCompletionFeedback.message}</Text>
         </Card>
       ) : null}
+      <Card>
+        <Text variant="title">Edit habit</Text>
+        <HabitForm
+          activeJars={activeJars}
+          initialHabit={habit}
+          submitLabel="Save habit"
+          onSubmit={(input) => {
+            updateHabit({ ...input, id: habit.id });
+          }}
+        />
+      </Card>
+      <Card>
+        <Text variant="title">Archive state</Text>
+        {habit.archivedAt ? (
+          <Button label="Restore habit" tone="secondary" onPress={() => restoreHabit(habit.id)} />
+        ) : (
+          <Button label="Archive habit" tone="secondary" onPress={() => archiveHabit(habit.id)} />
+        )}
+      </Card>
       <Card>
         <Text variant="title">Inventory for this jar</Text>
         <TokenInventory tokens={inventoryTokens} />

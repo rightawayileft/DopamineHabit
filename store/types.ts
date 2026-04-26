@@ -33,6 +33,7 @@ export interface Reward {
   tier: 1 | 2 | 3 | 'jackpot';
   durationMinutes?: number;
   description?: string;
+  archivedAt?: ISODate;
 }
 
 export interface Token {
@@ -53,6 +54,7 @@ export interface Jar {
   funMoneyPerTokenCents: number;
   funMoneyBalanceCents: number;
   createdAt: ISODate;
+  archivedAt?: ISODate;
 }
 
 export interface Milestone {
@@ -92,11 +94,14 @@ export interface BonusChain {
   id: UUID;
   startedAt: ISODate;
   endedAt?: ISODate;
+  originatingSpinResultId?: UUID;
   spins: BonusSpin[];
   outcome: 'in_progress' | 'completed' | 'timed_out' | 'max_chain';
 }
 
 export interface BonusSpin {
+  id: UUID;
+  seed: string;
   bonusAwardLanded:
     | 'discount_75'
     | 'discount_50'
@@ -107,6 +112,8 @@ export interface BonusSpin {
   timerStartedAt: ISODate;
   timerExpiresAt: ISODate;
   completedCompletionId?: UUID;
+  rewardGrantId?: UUID;
+  grantedTokenId?: UUID;
 }
 
 export interface IntegrityCheckIn {

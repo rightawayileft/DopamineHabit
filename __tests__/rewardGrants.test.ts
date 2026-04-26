@@ -22,6 +22,23 @@ describe('selectRewardForSpinResult', () => {
     expect(selected.reward?.id).toBe('reward-tier-1');
   });
 
+  it('does not select archived rewards', () => {
+    const selected = selectRewardForSpinResult(
+      rewardsFixture.map((reward) =>
+        reward.id === 'reward-tier-1'
+          ? {
+              ...reward,
+              archivedAt: '2026-04-23T15:00:00Z',
+            }
+          : reward,
+      ),
+      1,
+    );
+
+    expect(selected.strategy).toBe('fallback_lowest_tier');
+    expect(selected.reward?.id).toBe('reward-tier-2');
+  });
+
   it('returns none for bonus awards', () => {
     const selected = selectRewardForSpinResult(rewardsFixture, 'bonus');
 

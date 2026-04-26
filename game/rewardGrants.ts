@@ -17,6 +17,8 @@ export const selectRewardForSpinResult = (
   rewards: Reward[],
   awardedTier: SpinResult['awardedTier'],
 ): RewardSelectionResult => {
+  const availableRewards = rewards.filter((reward) => !reward.archivedAt);
+
   if (awardedTier === 'bonus') {
     return {
       reward: undefined,
@@ -24,7 +26,7 @@ export const selectRewardForSpinResult = (
     };
   }
 
-  const exactTierRewards = rewards.filter((reward) => reward.tier === awardedTier);
+  const exactTierRewards = availableRewards.filter((reward) => reward.tier === awardedTier);
   if (exactTierRewards.length > 0) {
     return {
       reward: exactTierRewards[0],
@@ -32,14 +34,14 @@ export const selectRewardForSpinResult = (
     };
   }
 
-  if (rewards.length === 0) {
+  if (availableRewards.length === 0) {
     return {
       reward: undefined,
       strategy: 'none_available',
     };
   }
 
-  const sortedByTier = rewards
+  const sortedByTier = availableRewards
     .slice()
     .sort((left, right) => tierWeight(left.tier) - tierWeight(right.tier));
 

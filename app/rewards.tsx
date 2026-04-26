@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import { RewardForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -19,9 +20,14 @@ export default function RewardsScreen() {
   const rewards = useAppStore((state) => state.rewards);
   const rewardGrants = useAppStore((state) => state.rewardGrants);
   const activeRewardSession = useAppStore((state) => state.activeRewardSession);
+  const createReward = useAppStore((state) => state.createReward);
+  const updateReward = useAppStore((state) => state.updateReward);
+  const archiveReward = useAppStore((state) => state.archiveReward);
+  const restoreReward = useAppStore((state) => state.restoreReward);
   const endActiveRewardSession = useAppStore((state) => state.endActiveRewardSession);
   const endRewardSessionEarly = useAppStore((state) => state.endRewardSessionEarly);
   const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
+  const [editingRewardId, setEditingRewardId] = useState<string | undefined>(undefined);
   const remainingMs = useTimer(activeRewardSession?.expiresAt);
 
   useEffect(() => {
@@ -37,6 +43,8 @@ export default function RewardsScreen() {
   const sortedGrants = rewardGrants
     .slice()
     .sort((left, right) => right.grantedAt.localeCompare(left.grantedAt));
+  const activeRewards = rewards.filter((reward) => !reward.archivedAt);
+  const archivedRewards = rewards.filter((reward) => reward.archivedAt);
 
   return (
     <Screen>
@@ -62,6 +70,65 @@ export default function RewardsScreen() {
           <Text muted>Spin to earn a timed reward session.</Text>
         </Card>
       )}
+
+      <Card>
+        <Text variant="title">Add reward</Text>
+        <RewardForm
+          submitLabel="Add reward"
+          onSubmit={(input) => {
+            createReward(input);
+          }}
+        />
+      </Card>
+
+      {activeRewards.length === 0 ? (
+        <Card>
+          <Text variant="title">No active rewards</Text>
+          <Text muted>Create or restore a reward before spinning for rewards.</Text>
+        </Card>
+      ) : null}
+
+      {activeRewards.map((reward) => (
+        <Card key={reward.id}>
+          <Text variant="title">{reward.name}</Text>
+          <Text muted>Tier {reward.tier}</Text>
+          {reward.durationMinutes ? <Text muted>{reward.durationMinutes} minutes</Text> : null}
+          {reward.description ? <Text muted>{reward.description}</Text> : null}
+          {editingRewardId === reward.id ? (
+            <RewardForm
+              initialReward={reward}
+              submitLabel="Save reward"
+              onSubmit={(input) => {
+                updateReward({ ...input, id: reward.id });
+                setEditingRewardId(undefined);
+              }}
+            />
+          ) : (
+            <Button
+              label="Edit"
+              tone="secondary"
+              onPress={() => setEditingRewardId(reward.id)}
+            />
+          )}
+          <Button label="Archive" tone="secondary" onPress={() => archiveReward(reward.id)} />
+        </Card>
+      ))}
+
+      {archivedRewards.length > 0 ? (
+        <Card>
+          <Text variant="title">Archived rewards</Text>
+          <Text muted>Archived rewards stay attached to old grants.</Text>
+        </Card>
+      ) : null}
+
+      {archivedRewards.map((reward) => (
+        <Card key={reward.id}>
+          <Text variant="title">{reward.name}</Text>
+          <Text muted>Archived at {reward.archivedAt}</Text>
+          <Button label="Restore" tone="secondary" onPress={() => restoreReward(reward.id)} />
+        </Card>
+      ))}
+
       <Card>
         <Text variant="title">Grant history</Text>
         {sortedGrants.length === 0 ? <Text muted>No grants yet.</Text> : null}

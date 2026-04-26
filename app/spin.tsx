@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 
 import { soundManager } from '@/audio/SoundManager';
@@ -22,6 +22,7 @@ export default function SpinScreen() {
   const pendingSpin = useAppStore((state) => state.pendingSpin);
   const spinResults = useAppStore((state) => state.spinResults);
   const rewards = useAppStore((state) => state.rewards);
+  const activeBonusChainId = useAppStore((state) => state.activeBonusChainId);
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
   const prepareSpin = useAppStore((state) => state.prepareSpin);
@@ -66,7 +67,9 @@ export default function SpinScreen() {
       : undefined;
     setLastLockedSlice(lockedSlice === 'tier2' || lockedSlice === 'tier3' ? lockedSlice : undefined);
     setSpinMessage(
-      result.wasNearMiss
+      result.rawLandedSlice === 'bonus'
+        ? 'Bonus round unlocked.'
+        : result.wasNearMiss
         ? `Near miss: landed on locked ${result.rawLandedSlice}, awarded Tier 1.`
         : awardedReward
           ? `Awarded ${result.awardedTier}: ${awardedReward.name}.`
@@ -143,6 +146,9 @@ export default function SpinScreen() {
           </Text>
           <Text muted>{spinMessage}</Text>
         </Card>
+      ) : null}
+      {activeBonusChainId ? (
+        <Button label="Open bonus round" tone="secondary" onPress={() => router.push('/bonus')} />
       ) : null}
       <Button
         disabled={!latestCompletion || !cashIn.isValid || isAnimating || Boolean(pendingSpin)}

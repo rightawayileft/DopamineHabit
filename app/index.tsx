@@ -33,9 +33,15 @@ export default function HomeScreen() {
     return <Redirect href="/onboarding/step2" />;
   }
 
-  const firstHabit = habits[0];
-  const firstJar = jars[0];
-  const firstReward = rewards[0];
+  const activeJars = jars.filter((jar) => !jar.archivedAt);
+  const activeJarIds = new Set(activeJars.map((jar) => jar.id));
+  const activeHabits = habits.filter(
+    (habit) => !habit.archivedAt && activeJarIds.has(habit.jarId),
+  );
+  const activeRewards = rewards.filter((reward) => !reward.archivedAt);
+  const firstHabit = activeHabits[0];
+  const firstJar = activeJars[0];
+  const firstReward = activeRewards[0];
   const inventoryTokens = tokens.filter((token) => token.state === 'in_inventory');
 
   const completeHabit = (habitId: string) => {
@@ -69,16 +75,33 @@ export default function HomeScreen() {
       <Card>
         <Text variant="title">Today</Text>
         <View style={{ gap: spacing.sm }}>
-          <Text muted>Jar: {firstJar?.name}</Text>
+          <Text muted>Jar: {firstJar?.name ?? 'No active jar'}</Text>
           <Text muted>
-            Tier 1 reward: {firstReward?.name}
+            Tier 1 reward: {firstReward?.name ?? 'No active reward'}
             {firstReward?.durationMinutes ? `, ${firstReward.durationMinutes} min` : ''}
           </Text>
           <Text muted>Integrity check-in: {integrityCheckInTime}</Text>
         </View>
       </Card>
+      <Card>
+        <Text variant="title">Manage options</Text>
+        <Button label="Habits" tone="secondary" onPress={() => router.push('/habits')} />
+        <Button label="Rewards" tone="secondary" onPress={() => router.push('/rewards')} />
+        <Button label="Jars" tone="secondary" onPress={() => router.push('/jars')} />
+        <Button
+          label="Integrity"
+          tone="secondary"
+          onPress={() => router.push('/checkin')}
+        />
+      </Card>
       <View style={{ gap: spacing.md }}>
-        {habits.map((habit) => (
+        {activeHabits.length === 0 ? (
+          <Card>
+            <Text variant="title">No active habits</Text>
+            <Text muted>Create or restore a habit from Manage options.</Text>
+          </Card>
+        ) : null}
+        {activeHabits.map((habit) => (
           <HabitCard
             key={habit.id}
             habit={habit}

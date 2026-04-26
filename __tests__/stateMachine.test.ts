@@ -35,6 +35,16 @@ describe('app state machine', () => {
     expect(useAppStore.getState().transitionTo('IDLE')).toBe(true);
   });
 
+  it('allows the bonus legal transition path', () => {
+    useAppStore.setState({ currentState: 'RESOLVING' });
+
+    expect(useAppStore.getState().transitionTo('BONUS_ROUND')).toBe(true);
+    expect(useAppStore.getState().transitionTo('BONUS_AWARDING_TIER')).toBe(true);
+    expect(useAppStore.getState().transitionTo('BONUS_SPINNING')).toBe(true);
+    expect(useAppStore.getState().transitionTo('BONUS_TIMER_ACTIVE')).toBe(true);
+    expect(useAppStore.getState().transitionTo('IDLE')).toBe(true);
+  });
+
   it('ignores illegal transitions without changing state', () => {
     const illegalTransitions = [
       'SPINNING',
