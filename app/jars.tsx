@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { buildJarProgress } from '@/game/milestones';
 import { useAppStore } from '@/store';
 
 export default function JarsScreen() {
@@ -47,11 +48,23 @@ export default function JarsScreen() {
       ) : null}
 
       {activeJars.map((jar) => {
-        const tokenCount = tokens.filter((token) => token.jarId === jar.id).length;
+        const progress = buildJarProgress(jar, tokens);
 
         return (
           <Card key={jar.id}>
-            <Jar jar={jar} tokenCount={tokenCount} />
+            <Jar
+              jar={jar}
+              tokenCount={progress.earnedTokenCount}
+              inventoryTokenCount={progress.inventoryTokenCount}
+            />
+            {progress.nextMilestone ? (
+              <Text muted>
+                Next: {progress.nextMilestone.label}, {progress.tokensUntilNextMilestone} tokens
+                left
+              </Text>
+            ) : (
+              <Text muted>All milestones unlocked.</Text>
+            )}
             <Button label="Details" onPress={() => router.push(`/jar/${jar.id}`)} />
             <Button label="Archive" tone="secondary" onPress={() => archiveJar(jar.id)} />
           </Card>
@@ -66,11 +79,15 @@ export default function JarsScreen() {
       ) : null}
 
       {archivedJars.map((jar) => {
-        const tokenCount = tokens.filter((token) => token.jarId === jar.id).length;
+        const progress = buildJarProgress(jar, tokens);
 
         return (
           <Card key={jar.id}>
-            <Jar jar={jar} tokenCount={tokenCount} />
+            <Jar
+              jar={jar}
+              tokenCount={progress.earnedTokenCount}
+              inventoryTokenCount={progress.inventoryTokenCount}
+            />
             <Text muted>Archived at {jar.archivedAt}</Text>
             <Button label="Restore" tone="secondary" onPress={() => restoreJar(jar.id)} />
           </Card>

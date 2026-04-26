@@ -180,5 +180,7 @@ export interface CompletionFeedback {
   completionId?: UUID;
   tokenId?: UUID;
   tokenColor?: TokenColor;
+  milestoneUnlockLabels?: string[];
+  funMoneyAwardedCents?: number;
   secondsRemaining?: number;
 }

@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { bonusDiscountPercent, resolveBonusAward } from '@/game/bonus';
 import { BONUS_CHAIN_MAX, BONUS_TIMER_MINUTES } from '@/game/constants';
 import { detectClockTamper, evaluateRateLimit } from '@/game/integrity';
+import { detectMilestoneUnlocks } from '@/game/milestones';
 import { resolveSpin, type ResolvedSpin } from '@/game/probabilities';
 import { selectRewardForSpinResult } from '@/game/rewardGrants';
 import { drawToken } from '@/game/tokenDraw';
@@ -30,6 +31,7 @@ import type {
   HabitCompletion,
   ISODate,
   Jar,
+  Milestone,
   PendingSpinContext,
   Reward,
   RewardGrant,
@@ -64,6 +66,7 @@ export interface AppActions {
   updateJar: (input: UpdateJarInput) => Jar | undefined;
   archiveJar: (jarId: UUID, archivedAt?: ISODate) => void;
   restoreJar: (jarId: UUID) => void;
+  addJarMilestone: (input: AddJarMilestoneInput) => Milestone | undefined;
   createHabit: (input: CreateHabitInput) => Habit | undefined;
   updateHabit: (input: UpdateHabitInput) => Habit | undefined;
   archiveHabit: (habitId: UUID, archivedAt?: ISODate) => void;
@@ -145,6 +148,14 @@ export interface UpdateJarInput {
   colorHex?: string;
   funMoneyEnabled?: boolean;
   funMoneyPerTokenCents?: number;
+}
+
+export interface AddJarMilestoneInput {
+  id?: UUID;
+  jarId: UUID;
+  tokenThreshold: number;
+  label: string;
+  imageUri?: string;
 }
 
 export interface CreateHabitInput {
@@ -295,6 +306,101 @@ const optionalTrimmed = (value: string | undefined): string | undefined => {
 const activeJarById = (jars: Jar[], jarId: UUID): Jar | undefined =>
   jars.find((jar) => jar.id === jarId && !jar.archivedAt);
 
+const createDefaultMilestones = (): Milestone[] => [
+  {
+    id: createUuid(),
+    tokenThreshold: 10,
+    label: 'First 10 tokens',
+  },
+  {
+    id: createUuid(),
+    tokenThreshold: 25,
+    label: '25-token streak',
+  },
+  {
+    id: createUuid(),
+    tokenThreshold: 50,
+    label: '50-token milestone',
+  },
+];
+
+const applyJarTokenEarnings = ({
+  earnedAt,
+  earnedTokenCount,
+  jarId,
+  jars,
+  tokens,
+}: {
+  earnedAt: ISODate;
+  earnedTokenCount: number;
+  jarId: UUID;
+  jars: Jar[];
+  tokens: Token[];
+}): {
+  jars: Jar[];
+  milestoneUnlockLabels: string[];
+  funMoneyAwardedCents: number;
+} => {
+  const previousEarnedCount = tokens.filter((token) => token.jarId === jarId).length;
+  const nextEarnedCount = previousEarnedCount + earnedTokenCount;
+  const milestoneUnlockLabels: string[] = [];
+  let funMoneyAwardedCents = 0;
+
+  return {
+    jars: jars.map((jar) => {
+      if (jar.id !== jarId) {
+        return jar;
+      }
+
+      const unlocks = detectMilestoneUnlocks(
+        jar,
+        previousEarnedCount,
+        nextEarnedCount,
+        earnedAt,
+      );
+      const unlockedById = new Map(
+        unlocks.map((unlock) => [unlock.milestoneId, unlock.unlockedMilestone]),
+      );
+      milestoneUnlockLabels.push(
+        ...unlocks.map((unlock) => unlock.unlockedMilestone.label),
+      );
+
+      if (jar.funMoneyEnabled) {
+        funMoneyAwardedCents = earnedTokenCount * jar.funMoneyPerTokenCents;
+      }
+
+      return {
+        ...jar,
+        funMoneyBalanceCents: jar.funMoneyBalanceCents + funMoneyAwardedCents,
+        milestones: jar.milestones.map(
+          (milestone) => unlockedById.get(milestone.id) ?? milestone,
+        ),
+      };
+    }),
+    milestoneUnlockLabels,
+    funMoneyAwardedCents,
+  };
+};
+
+const buildCompletionMessage = ({
+  baseMessage,
+  funMoneyAwardedCents,
+  milestoneUnlockLabels,
+}: {
+  baseMessage: string;
+  funMoneyAwardedCents: number;
+  milestoneUnlockLabels: string[];
+}): string => {
+  const suffixes = [
+    ...milestoneUnlockLabels.map((label) => `Unlocked ${label}.`),
+    ...(funMoneyAwardedCents > 0
+      ? [`Fun money +$${(funMoneyAwardedCents / 100).toFixed(2)}.`]
+      : []),
+  ];
+
+  return suffixes.length > 0 ? `${baseMessage} ${suffixes.join(' ')}` : baseMessage;
+};
+
 const createBonusToken = ({
   award,
   bonusTokenId,
@@ -400,7 +506,7 @@ export const useAppStore = create<AppStore>()(
           id,
           name: trimmedName,
           colorHex,
-          milestones: [],
+          milestones: createDefaultMilestones(),
           funMoneyEnabled,
           funMoneyPerTokenCents,
           funMoneyBalanceCents: 0,
@@ -467,6 +573,38 @@ export const useAppStore = create<AppStore>()(
             return restoredJar;
           }),
         }));
+      },
+
+      addJarMilestone: ({ id = createUuid(), jarId, tokenThreshold, label, imageUri }) => {
+        const trimmedLabel = optionalTrimmed(label);
+        const trimmedImageUri = optionalTrimmed(imageUri);
+        const jar = get().jars.find((candidate) => candidate.id === jarId);
+
+        if (!jar || !trimmedLabel || !Number.isFinite(tokenThreshold) || tokenThreshold <= 0) {
+          return undefined;
+        }
+
+        const milestone: Milestone = {
+          id,
+          tokenThreshold,
+          label: trimmedLabel,
+          ...(trimmedImageUri ? { imageUri: trimmedImageUri } : {}),
+        };
+
+        set((state) => ({
+          jars: state.jars.map((candidate) =>
+            candidate.id === jarId
+              ? {
+                  ...candidate,
+                  milestones: [...candidate.milestones, milestone].sort(
+                    (left, right) => left.tokenThreshold - right.tokenThreshold,
+                  ),
+                }
+              : candidate,
+          ),
+        }));
+
+        return milestone;
       },
 
       createHabit: ({ id = createUuid(), name, cue, jarId, createdAt = nowIso() }) => {
@@ -662,7 +800,7 @@ export const useAppStore = create<AppStore>()(
           id: createUuid(),
           name: jarName.trim(),
           colorHex: jarColorHex,
-          milestones: [],
+          milestones: createDefaultMilestones(),
           funMoneyEnabled: false,
           funMoneyPerTokenCents: 50,
           funMoneyBalanceCents: 0,
@@ -780,11 +918,19 @@ export const useAppStore = create<AppStore>()(
           ...token,
           sourceCompletionId: completion.id,
         };
+        const earningUpdate = applyJarTokenEarnings({
+          earnedAt: completedAt,
+          earnedTokenCount: 1,
+          jarId: habit.jarId,
+          jars: state.jars,
+          tokens: state.tokens,
+        });
 
         set((current) => ({
           currentState: 'INVENTORY_OPEN',
           completions: [...current.completions, completion],
           tokens: [...current.tokens, tokenWithCompletion],
+          jars: earningUpdate.jars,
           lastCompletionFeedback: {
             status: 'completed',
             habitId,
@@ -792,7 +938,13 @@ export const useAppStore = create<AppStore>()(
             completionId: completion.id,
             tokenId: tokenWithCompletion.id,
             tokenColor: tokenWithCompletion.color,
-            message: `Token drawn: ${tokenWithCompletion.color}.`,
+            milestoneUnlockLabels: earningUpdate.milestoneUnlockLabels,
+            funMoneyAwardedCents: earningUpdate.funMoneyAwardedCents,
+            message: buildCompletionMessage({
+              baseMessage: `Token drawn: ${tokenWithCompletion.color}.`,
+              milestoneUnlockLabels: earningUpdate.milestoneUnlockLabels,
+              funMoneyAwardedCents: earningUpdate.funMoneyAwardedCents,
+            }),
           },
         }));
 
@@ -1139,6 +1291,13 @@ export const useAppStore = create<AppStore>()(
           !shouldContinueChain && !bonusRewardGrant
             ? 'No Tier 1 reward configured for completed bonus chain.'
             : undefined;
+        const earningUpdate = applyJarTokenEarnings({
+          earnedAt: completedAt,
+          earnedTokenCount: 1 + (bonusToken ? 1 : 0),
+          jarId: habit.jarId,
+          jars: state.jars,
+          tokens: state.tokens,
+        });
 
         set((current) => ({
           currentState: shouldContinueChain
@@ -1150,6 +1309,7 @@ export const useAppStore = create<AppStore>()(
                 : 'IDLE',
           completions: [...current.completions, completion],
           tokens: [...current.tokens, token, ...(bonusToken ? [bonusToken] : [])],
+          jars: earningUpdate.jars,
           rewardGrants: bonusRewardGrant
             ? [...current.rewardGrants, bonusRewardGrant]
             : current.rewardGrants,
@@ -1165,9 +1325,15 @@ export const useAppStore = create<AppStore>()(
             completionId: completion.id,
             tokenId: token.id,
             tokenColor: token.color,
-            message: bonusToken
-              ? `Bonus rep claimed: ${token.color} plus ${bonusToken.color}.`
-              : `Bonus rep claimed: ${token.color}.`,
+            milestoneUnlockLabels: earningUpdate.milestoneUnlockLabels,
+            funMoneyAwardedCents: earningUpdate.funMoneyAwardedCents,
+            message: buildCompletionMessage({
+              baseMessage: bonusToken
+                ? `Bonus rep claimed: ${token.color} plus ${bonusToken.color}.`
+                : `Bonus rep claimed: ${token.color}.`,
+              milestoneUnlockLabels: earningUpdate.milestoneUnlockLabels,
+              funMoneyAwardedCents: earningUpdate.funMoneyAwardedCents,
+            }),
           },
           integrityRuntime: noRewardWarning
             ? {

@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/Button';
 import { FieldLabel } from '@/components/ui/FieldLabel';
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
-import type { CreateHabitInput, CreateJarInput, CreateRewardInput } from '@/store';
+import type {
+  AddJarMilestoneInput,
+  CreateHabitInput,
+  CreateJarInput,
+  CreateRewardInput,
+} from '@/store';
 import type { Habit, Jar, Reward } from '@/store/types';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -176,6 +181,44 @@ export function RewardForm({ initialReward, submitLabel, onSubmit }: RewardFormP
             tier,
             durationMinutes: duration,
             description,
+          })
+        }
+      />
+    </View>
+  );
+}
+
+export interface MilestoneFormProps {
+  jarId: string;
+  submitLabel: string;
+  onSubmit: (input: AddJarMilestoneInput) => void;
+}
+
+export function MilestoneForm({ jarId, submitLabel, onSubmit }: MilestoneFormProps) {
+  const [label, setLabel] = useState('');
+  const [tokenThreshold, setTokenThreshold] = useState('10');
+  const threshold = Number(tokenThreshold);
+  const canSubmit = label.trim().length > 0 && Number.isFinite(threshold) && threshold > 0;
+
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <FieldLabel>Milestone label</FieldLabel>
+      <Input value={label} onChangeText={setLabel} placeholder="First 10 tokens" />
+      <FieldLabel>Token threshold</FieldLabel>
+      <Input
+        keyboardType="number-pad"
+        value={tokenThreshold}
+        onChangeText={setTokenThreshold}
+        placeholder="10"
+      />
+      <Button
+        disabled={!canSubmit}
+        label={submitLabel}
+        onPress={() =>
+          onSubmit({
+            jarId,
+            label,
+            tokenThreshold: threshold,
           })
         }
       />

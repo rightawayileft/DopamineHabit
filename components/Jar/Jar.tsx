@@ -8,9 +8,12 @@ import { radius, spacing } from '@/theme/spacing';
 export interface JarProps {
   jar: JarModel;
   tokenCount: number;
+  inventoryTokenCount?: number;
 }
 
-export function Jar({ jar, tokenCount }: JarProps) {
+export function Jar({ jar, tokenCount, inventoryTokenCount }: JarProps) {
+  const unlockedCount = jar.milestones.filter((milestone) => milestone.unlockedAt).length;
+
   return (
     <View
       style={{
@@ -23,6 +26,15 @@ export function Jar({ jar, tokenCount }: JarProps) {
     >
       <Text variant="title">{jar.name}</Text>
       <Text muted>{tokenCount} tokens earned</Text>
+      {inventoryTokenCount === undefined ? null : (
+        <Text muted>{inventoryTokenCount} tokens in inventory</Text>
+      )}
+      <Text muted>
+        Milestones: {unlockedCount}/{jar.milestones.length}
+      </Text>
+      {jar.funMoneyEnabled ? (
+        <Text muted>Fun money: ${(jar.funMoneyBalanceCents / 100).toFixed(2)}</Text>
+      ) : null}
     </View>
   );
 }
