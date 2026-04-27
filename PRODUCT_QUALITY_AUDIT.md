@@ -4,7 +4,7 @@ Date: 2026-04-27
 
 Scope: DopamineHabit local repo, local persistence model, product flows, route surface, and roadmap quality. This audit focuses on product improvement opportunities: incomplete features, user friction, workflow gaps, and agent-ready product review patterns.
 
-Implementation note: PR10 addressed QF-001, QF-002, and QF-003 by restoring `DOPAMINEHABIT_SPEC_CODEX.md`, adding persistent navigation plus a Manage hub, surfacing add-more actions from Home/onboarding, and replacing the placeholder Settings and Stats routes with useful first versions.
+Implementation note: PR10 addressed QF-001, QF-002, and QF-003 by restoring `DOPAMINEHABIT_SPEC_CODEX.md`, adding persistent navigation plus a Manage hub, surfacing add-more actions from Home/onboarding, and replacing the placeholder Settings and Stats routes with useful first versions. PR11 addressed QF-004 and QF-005 with versioned local DB migrations, migration tests, Settings export/import/reset controls, and `docs/PERSISTENCE.md`.
 
 ## Research Inputs
 

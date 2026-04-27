@@ -100,7 +100,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Local-first state is the source of truth for the app experience.
 - State transitions that the UI depends on must be persisted before animations or follow-up navigation rely on them.
 - `HabitCompletion`, `SpinResult`, `BonusChain`, and `RewardGrant` records are append-only.
-- Future persisted-state changes require explicit versioning and migrations.
+- Persisted-state changes require explicit versioning and migrations. See `docs/PERSISTENCE.md`.
 
 ## Agent Audit Expectations
 

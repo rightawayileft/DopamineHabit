@@ -30,6 +30,7 @@ import type {
   CompletionFeedback,
   Habit,
   HabitCompletion,
+  IntegrityCheckIn,
   ISODate,
   Jar,
   Milestone,
@@ -97,6 +98,9 @@ export interface AppActions {
   updateSettings: (settings: Partial<UserSettings>) => void;
   markAppSeen: (timestamp?: ISODate) => void;
   clearCompletionFeedback: () => void;
+  exportLocalData: () => string;
+  importLocalData: (serializedData: string) => ImportLocalDataResult;
+  resetLocalData: () => void;
   resetForTests: () => void;
   rehydrateFromStorageForTests: () => void;
 }
@@ -207,6 +211,13 @@ type PersistedAppState = AppState;
 interface PersistedEnvelope {
   state: Partial<PersistedAppState>;
   version: number;
+}
+
+export const APP_STORE_PERSIST_VERSION = 1;
+
+export interface ImportLocalDataResult {
+  status: 'imported' | 'failed';
+  message: string;
 }
 
 const legalTransitions: Record<AppMachineState, AppMachineState[]> = {
@@ -338,6 +349,146 @@ const createDefaultMilestones = (): Milestone[] => [
     label: '50-token milestone',
   },
 ];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const optionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
+const arrayOrFallback = <T,>(value: unknown, fallback: T[]): T[] =>
+  Array.isArray(value) ? (value as T[]) : fallback;
+
+const normalizeCompletions = (
+  value: unknown,
+  fallback: HabitCompletion[],
+): HabitCompletion[] =>
+  arrayOrFallback<Partial<HabitCompletion>>(value, fallback).map((completion) => ({
+    ...completion,
+    id: completion.id ?? createUuid(),
+    habitId: completion.habitId ?? '',
+    completedAt: completion.completedAt ?? nowIso(),
+    tokenDrawnId: completion.tokenDrawnId ?? '',
+    wasBonusRep: completion.wasBonusRep ?? false,
+  }));
+
+const normalizeJars = (value: unknown, fallback: Jar[]): Jar[] =>
+  arrayOrFallback<Partial<Jar>>(value, fallback).map((jar) => ({
+    id: jar.id ?? createUuid(),
+    name: jar.name ?? 'Untitled jar',
+    colorHex: jar.colorHex ?? '#46D56E',
+    milestones: Array.isArray(jar.milestones) ? jar.milestones : createDefaultMilestones(),
+    funMoneyEnabled: jar.funMoneyEnabled ?? false,
+    funMoneyPerTokenCents: jar.funMoneyPerTokenCents ?? 50,
+    funMoneyBalanceCents: jar.funMoneyBalanceCents ?? 0,
+    createdAt: jar.createdAt ?? nowIso(),
+    ...(jar.archivedAt ? { archivedAt: jar.archivedAt } : {}),
+  }));
+
+const normalizeSettings = (value: unknown, fallback: UserSettings): UserSettings => {
+  const settings = isRecord(value) ? value : {};
+  const rateLimitSecondsPerHabit = isRecord(settings.rateLimitSecondsPerHabit)
+    ? (settings.rateLimitSecondsPerHabit as Record<UUID, number>)
+    : {};
+
+  return {
+    integrityCheckInTime: optionalString(settings.integrityCheckInTime) ?? fallback.integrityCheckInTime,
+    hapticsEnabled:
+      typeof settings.hapticsEnabled === 'boolean' ? settings.hapticsEnabled : fallback.hapticsEnabled,
+    soundEnabled:
+      typeof settings.soundEnabled === 'boolean' ? settings.soundEnabled : fallback.soundEnabled,
+    reducedMotion:
+      typeof settings.reducedMotion === 'boolean' ? settings.reducedMotion : fallback.reducedMotion,
+    nakedRuleAcceptedAt: optionalString(settings.nakedRuleAcceptedAt) ?? fallback.nakedRuleAcceptedAt,
+    rateLimitSecondsPerHabit: {
+      ...fallback.rateLimitSecondsPerHabit,
+      ...rateLimitSecondsPerHabit,
+    },
+  };
+};
+
+const normalizeIntegrityRuntime = (
+  value: unknown,
+  fallback: IntegritySlice['integrityRuntime'],
+): IntegritySlice['integrityRuntime'] => {
+  const runtime = isRecord(value) ? value : {};
+
+  return {
+    honestyStreak:
+      typeof runtime.honestyStreak === 'number' ? runtime.honestyStreak : fallback.honestyStreak,
+    honestAdmissionCount:
+      typeof runtime.honestAdmissionCount === 'number'
+        ? runtime.honestAdmissionCount
+        : fallback.honestAdmissionCount,
+    lastSeenTimestamp: optionalString(runtime.lastSeenTimestamp) ?? fallback.lastSeenTimestamp,
+    clockTamperDetected:
+      typeof runtime.clockTamperDetected === 'boolean'
+        ? runtime.clockTamperDetected
+        : fallback.clockTamperDetected,
+    warnings: Array.isArray(runtime.warnings) ? (runtime.warnings as string[]) : fallback.warnings,
+  };
+};
+
+export const migratePersistedAppState = (
+  persistedState: unknown,
+  _persistedVersion = 0,
+): PersistedAppState => {
+  const initialState = createInitialAppState();
+  const state = isRecord(persistedState) ? persistedState : {};
+
+  return {
+    ...initialState,
+    currentState: (state.currentState as AppMachineState | undefined) ?? initialState.currentState,
+    activeRewardSession: state.activeRewardSession as ActiveRewardSession | undefined,
+    lastCompletionFeedback: state.lastCompletionFeedback as CompletionFeedback | undefined,
+    habits: arrayOrFallback<Habit>(state.habits, initialState.habits),
+    completions: normalizeCompletions(state.completions, initialState.completions),
+    tokens: arrayOrFallback<Token>(state.tokens, initialState.tokens),
+    jars: normalizeJars(state.jars, initialState.jars),
+    rewards: arrayOrFallback<Reward>(state.rewards, initialState.rewards),
+    rewardGrants: arrayOrFallback<RewardGrant>(state.rewardGrants, initialState.rewardGrants),
+    spinResults: arrayOrFallback<SpinResult>(state.spinResults, initialState.spinResults),
+    pendingSpin: state.pendingSpin as PendingSpinContext | undefined,
+    bonusChains: arrayOrFallback<BonusChain>(state.bonusChains, initialState.bonusChains),
+    activeBonusChainId: optionalString(state.activeBonusChainId),
+    settings: normalizeSettings(state.settings, initialState.settings),
+    integrityCheckIns: arrayOrFallback<IntegrityCheckIn>(
+      state.integrityCheckIns,
+      initialState.integrityCheckIns,
+    ),
+    integrityRuntime: normalizeIntegrityRuntime(
+      state.integrityRuntime,
+      initialState.integrityRuntime,
+    ),
+  };
+};
+
+const createPersistedEnvelope = (state: AppStore): PersistedEnvelope => ({
+  version: APP_STORE_PERSIST_VERSION,
+  state: persistableState(state),
+});
+
+const parseImportEnvelope = (
+  serializedData: string,
+): { state: unknown; version: number } | undefined => {
+  const parsed = JSON.parse(serializedData) as unknown;
+
+  if (!isRecord(parsed)) {
+    return undefined;
+  }
+
+  if ('state' in parsed) {
+    return {
+      state: parsed.state,
+      version: typeof parsed.version === 'number' ? parsed.version : 0,
+    };
+  }
+
+  return {
+    state: parsed,
+    version: 0,
+  };
+};
 
 const applyJarTokenEarnings = ({
   earnedAt,
@@ -1578,6 +1729,38 @@ export const useAppStore = create<AppStore>()(
         });
       },
 
+      exportLocalData: () => JSON.stringify(createPersistedEnvelope(get()), null, 2),
+
+      importLocalData: (serializedData) => {
+        try {
+          const envelope = parseImportEnvelope(serializedData);
+
+          if (!envelope) {
+            return {
+              status: 'failed',
+              message: 'Import must be a DopamineHabit state object or exported envelope.',
+            };
+          }
+
+          set(migratePersistedAppState(envelope.state, envelope.version));
+
+          return {
+            status: 'imported',
+            message: `Imported local data from version ${envelope.version}.`,
+          };
+        } catch {
+          return {
+            status: 'failed',
+            message: 'Import failed. Check that the pasted text is valid JSON.',
+          };
+        }
+      },
+
+      resetLocalData: () => {
+        appStorage.removeItem(APP_STORE_STORAGE_KEY);
+        set(createInitialAppState());
+      },
+
       resetForTests: () => {
         set(createInitialAppState());
       },
@@ -1586,16 +1769,16 @@ export const useAppStore = create<AppStore>()(
         const persisted = readPersistedJsonForTests<PersistedEnvelope>(APP_STORE_STORAGE_KEY);
 
         if (persisted?.state) {
-          set({
-            ...createInitialAppState(),
-            ...persisted.state,
-          });
+          set(migratePersistedAppState(persisted.state, persisted.version));
         }
       },
     }),
     {
       name: APP_STORE_STORAGE_KEY,
       storage: createJSONStorage(() => appStorage),
+      version: APP_STORE_PERSIST_VERSION,
+      migrate: (persistedState, persistedVersion) =>
+        migratePersistedAppState(persistedState, persistedVersion),
       partialize: persistableState,
     },
   ),

@@ -13,6 +13,7 @@ This file is the current handoff map for local and cloud work. The product behav
 - Portable fallback: Vercel via `vercel.json`
 - Product quality audit: `PRODUCT_QUALITY_AUDIT.md`
 - Product behavior source of truth: `DOPAMINEHABIT_SPEC_CODEX.md`
+- Local persistence contract: `docs/PERSISTENCE.md`
 
 ## Completed Checkpoints
 
@@ -28,20 +29,21 @@ This file is the current handoff map for local and cloud work. The product behav
 - Post-PR9 agentic audit hardening: blocked repeat spin exploits, resumable interrupted spins, active reward/session guards, retroactive milestone unlocks, duplicate/skipped integrity check-in handling, and focused UX/accessibility feedback.
 - Product quality audit: researched product-level agent prompt patterns, audited local product flows and persistence risks, and created a PR-sized improvement roadmap in `PRODUCT_QUALITY_AUDIT.md`.
 - PR10 product legibility and navigation: restored the missing product spec, added persistent primary navigation plus a Manage hub, replaced placeholder Settings and Stats routes, surfaced add-more habit/reward/jar affordances from Home/onboarding, added build/local-data visibility, and added stats summary tests.
+- PR11 local DB durability and data controls: added persisted-state versioning, migration helpers, old-envelope migration tests, Settings export/import/reset controls, stale-state recovery copy, and `docs/PERSISTENCE.md`.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR11 should focus on local DB durability and data controls.
+PR12 should focus on first-loop expansion and guided setup.
 
 Recommended scope:
 
-- Add explicit persisted-state versioning and migrations for `APP_STORE_STORAGE_KEY`.
-- Add tests for older persisted envelopes missing newer fields.
-- Add Settings actions for reset local data, export JSON, and import JSON.
-- Add user-facing stale-state recovery copy for web.
-- Document the persistence contract in the repo.
+- Add a post-onboarding "Next: add another option or start the first rep" step.
+- Offer optional quick-add templates for common habits and rewards.
+- Add inline explanations for jar, habit, reward, token, spin, bonus, and integrity concepts in context.
+- Add a first-spin checklist that unlocks only after the user has a rep ready.
+- Add focused tests for first-loop guidance and checklist state.
 
 ## Later Checkpoints
 
