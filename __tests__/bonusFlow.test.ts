@@ -7,7 +7,7 @@ import {
   resetPersistenceForTests,
   writePersistedJsonForTests,
 } from '@/store/persistence';
-import type { BonusSpin } from '@/store/types';
+import type { BonusSpin, Token } from '@/store/types';
 
 interface PersistedEnvelope {
   state: Partial<AppState>;
@@ -69,6 +69,22 @@ const createActiveBonusChain = () => {
   });
 };
 
+const addTierThreeCashInTokens = (jarId: string): string[] => {
+  const tokens: Token[] = Array.from({ length: 3 }, (_, index) => ({
+    id: `bonus-cash-in-${index + 1}`,
+    color: 'blue',
+    earnedAt: `2026-04-23T13:0${index + 6}:00Z`,
+    state: 'in_inventory',
+    jarId,
+  }));
+
+  useAppStore.setState((state) => ({
+    tokens: [...state.tokens, ...tokens],
+  }));
+
+  return tokens.map((token) => token.id);
+};
+
 describe('bonus flow', () => {
   beforeEach(() => {
     resetPersistenceForTests();
@@ -90,6 +106,7 @@ describe('bonus flow', () => {
     useAppStore.getState().prepareSpin({
       habitCompletionId: completion.id,
       activatedMaxTier: 3,
+      cashedInTokenIds: addTierThreeCashInTokens(habit.jarId),
       seed: findBonusSeed(),
     });
     const result = useAppStore.getState().resolvePreparedSpin('spin-bonus-1');

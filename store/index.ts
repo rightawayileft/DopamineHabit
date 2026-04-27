@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { bonusDiscountPercent, resolveBonusAward } from '@/game/bonus';
 import { BONUS_CHAIN_MAX, BONUS_TIMER_MINUTES } from '@/game/constants';
+import { resolveCashIn } from '@/game/cashIn';
 import { detectClockTamper, evaluateRateLimit } from '@/game/integrity';
 import { detectMilestoneUnlocks } from '@/game/milestones';
 import { resolveSpin, type ResolvedSpin } from '@/game/probabilities';
@@ -40,7 +41,7 @@ import type {
   UserSettings,
   UUID,
 } from '@/store/types';
-import { addMinutesToIso, nowIso } from '@/utils/date';
+import { addMinutesToIso, nowIso, toLocalDateKey } from '@/utils/date';
 import { createUuid } from '@/utils/uuid';
 
 export interface AppState
@@ -267,6 +268,20 @@ const latestCompletionForHabit = (
   completions
     .filter((completion) => completion.habitId === habitId)
     .sort((left, right) => right.completedAt.localeCompare(left.completedAt))[0];
+
+const localDateKeyFromIso = (timestamp: ISODate): string => toLocalDateKey(new Date(timestamp));
+
+const previousLocalDateKey = (dateKey: string): string => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() - 1);
+
+  return toLocalDateKey(date);
+};
+
+const latestCheckInDate = (checkIns: { date: string; answeredAt: ISODate }[]): string | undefined =>
+  checkIns
+    .slice()
+    .sort((left, right) => right.answeredAt.localeCompare(left.answeredAt))[0]?.date;
 
 const buildSpinResult = (
   pendingSpin: PendingSpinContext,
@@ -584,10 +599,12 @@ export const useAppStore = create<AppStore>()(
           return undefined;
         }
 
+        const earnedTokenCount = get().tokens.filter((token) => token.jarId === jarId).length;
         const milestone: Milestone = {
           id,
           tokenThreshold,
           label: trimmedLabel,
+          ...(tokenThreshold <= earnedTokenCount ? { unlockedAt: nowIso() } : {}),
           ...(trimmedImageUri ? { imageUri: trimmedImageUri } : {}),
         };
 
@@ -958,6 +975,48 @@ export const useAppStore = create<AppStore>()(
         seed,
         startedAt = nowIso(),
       }) => {
+        const state = get();
+        const completion = state.completions.find(
+          (candidate) => candidate.id === habitCompletionId,
+        );
+        const habit = completion
+          ? state.habits.find((candidate) => candidate.id === completion.habitId)
+          : undefined;
+        const alreadySpun = state.spinResults.some(
+          (spinResult) => spinResult.habitCompletionId === habitCompletionId,
+        );
+        const duplicatePendingSpin = state.pendingSpin?.habitCompletionId === habitCompletionId;
+
+        if (
+          !completion ||
+          !habit ||
+          habit.archivedAt ||
+          state.activeRewardSession ||
+          state.pendingSpin ||
+          alreadySpun ||
+          duplicatePendingSpin
+        ) {
+          return undefined;
+        }
+
+        const selectedTokens = state.tokens.filter((token) => cashedInTokenIds.includes(token.id));
+        const selectedTokenIds = new Set(selectedTokens.map((token) => token.id));
+        const allTokensAvailable =
+          selectedTokens.length === cashedInTokenIds.length &&
+          selectedTokens.every(
+            (token) => token.state === 'in_inventory' && token.jarId === habit.jarId,
+          );
+        const cashIn = resolveCashIn(selectedTokens);
+
+        if (
+          !allTokensAvailable ||
+          !cashIn.isValid ||
+          cashIn.activatedMaxTier !== activatedMaxTier ||
+          !cashIn.cashedInTokenIds.every((tokenId) => selectedTokenIds.has(tokenId))
+        ) {
+          return undefined;
+        }
+
         const resolvedSpin: ResolvedSpin = resolveSpin({
           activatedMaxTier,
           ...(seed === undefined ? {} : { seed }),
@@ -1142,7 +1201,8 @@ export const useAppStore = create<AppStore>()(
           !activeBonusChain ||
           activeBonusChain.outcome !== 'in_progress' ||
           !activeBonusSpin ||
-          activeBonusSpin.completedCompletionId
+          activeBonusSpin.completedCompletionId ||
+          state.activeRewardSession
         ) {
           return undefined;
         }
@@ -1448,20 +1508,32 @@ export const useAppStore = create<AppStore>()(
 
       answerIntegrityCheckIn: (answer, answeredAt = nowIso()) => {
         const answeredYes = answer === 'yes';
+        const date = localDateKeyFromIso(answeredAt);
+        const existingCheckInForDate = get().integrityCheckIns.some(
+          (checkIn) => checkIn.date === date,
+        );
+
+        if (existingCheckInForDate) {
+          return;
+        }
 
         set((state) => ({
           integrityCheckIns: [
             ...state.integrityCheckIns,
             {
               id: createUuid(),
-              date: answeredAt.slice(0, 10),
+              date,
               answer,
               answeredAt,
             },
           ],
           integrityRuntime: {
             ...state.integrityRuntime,
-            honestyStreak: answeredYes ? state.integrityRuntime.honestyStreak + 1 : 0,
+            honestyStreak: answeredYes
+              ? latestCheckInDate(state.integrityCheckIns) === previousLocalDateKey(date)
+                ? state.integrityRuntime.honestyStreak + 1
+                : 1
+              : 0,
             honestAdmissionCount: answeredYes
               ? state.integrityRuntime.honestAdmissionCount
               : state.integrityRuntime.honestAdmissionCount + 1,

@@ -62,8 +62,28 @@ describe('app state machine', () => {
   });
 
   it('persists RESOLVING state through simulated restart', () => {
+    useAppStore.getState().acceptNakedRule('2026-04-23T11:45:00Z');
+    const { habit } = useAppStore.getState().createInitialOnboardingSetup({
+      jarName: 'Fitness',
+      jarColorHex: '#46D56E',
+      habitName: '10 pushups',
+      habitCue: 'Walking to the kitchen',
+      rewardName: 'Clash Royale',
+      rewardDurationMinutes: 3,
+      createdAt: '2026-04-23T11:50:00Z',
+    });
+    const completion = useAppStore.getState().logHabitCompletion({
+      habitId: habit.id,
+      completedAt: '2026-04-23T11:55:00Z',
+      tokenSeed: 'restart-token-seed',
+    });
+
+    if (!completion) {
+      throw new Error('Expected completion fixture.');
+    }
+
     const pendingSpin = useAppStore.getState().prepareSpin({
-      habitCompletionId: 'completion-1',
+      habitCompletionId: completion.id,
       activatedMaxTier: 1,
       seed: 'restart-seed',
       startedAt: '2026-04-23T12:00:00Z',

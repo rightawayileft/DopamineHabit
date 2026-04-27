@@ -23,6 +23,7 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR7 rewards, habits, and jars management: create/edit/archive/restore flows, active/archived filtering, history-preserving jar and reward references, management entry points, and persistence tests.
 - PR8 integrity loop: daily check-in UI, honesty streak/admission display, skipped-check-in and clock-tamper messaging, app-seen drift detection, append-only persisted check-in tests.
 - PR9 milestones and fun money: earned/inventory jar progress, default and custom milestones, unlock feedback, optional fun-money balance accounting, bonus-token progress, and persistence tests.
+- Post-PR9 agentic audit hardening: blocked repeat spin exploits, resumable interrupted spins, active reward/session guards, retroactive milestone unlocks, duplicate/skipped integrity check-in handling, and focused UX/accessibility feedback.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 

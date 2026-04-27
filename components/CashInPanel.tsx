@@ -42,6 +42,7 @@ export function CashInPanel({
             <Button
               key={token.id}
               accessibilityLabel={`Select ${token.color} token`}
+              accessibilityState={{ selected }}
               onPress={() => onToggleToken(token.id)}
               style={{
                 backgroundColor: colors.tokenColors[token.color],

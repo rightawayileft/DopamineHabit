@@ -22,6 +22,9 @@ export default function SpinScreen() {
   const pendingSpin = useAppStore((state) => state.pendingSpin);
   const spinResults = useAppStore((state) => state.spinResults);
   const rewards = useAppStore((state) => state.rewards);
+  const habits = useAppStore((state) => state.habits);
+  const activeRewardSession = useAppStore((state) => state.activeRewardSession);
+  const rewardGrants = useAppStore((state) => state.rewardGrants);
   const activeBonusChainId = useAppStore((state) => state.activeBonusChainId);
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
@@ -32,15 +35,30 @@ export default function SpinScreen() {
   const [spinMessage, setSpinMessage] = useState<string | undefined>(undefined);
   const { animatedWheelStyle, isAnimating, startSpin } = useSpinAnimation();
 
+  const spunCompletionIds = new Set(spinResults.map((spinResult) => spinResult.habitCompletionId));
   const latestCompletion = completions
     .slice()
+    .filter((completion) => !spunCompletionIds.has(completion.id))
     .sort((left, right) => right.completedAt.localeCompare(left.completedAt))[0];
-  const inventoryTokens = tokens.filter((token) => token.state === 'in_inventory');
+  const latestCompletionHabit = latestCompletion
+    ? habits.find((habit) => habit.id === latestCompletion.habitId)
+    : undefined;
+  const inventoryTokens = tokens.filter(
+    (token) =>
+      token.state === 'in_inventory' &&
+      (!latestCompletionHabit || token.jarId === latestCompletionHabit.jarId),
+  );
   const selectedTokens = inventoryTokens.filter((token) => selectedTokenIds.includes(token.id));
   const cashIn = useMemo(() => resolveCashIn(selectedTokens), [selectedTokens]);
   const latestSpinResult = spinResults
     .slice()
     .sort((left, right) => right.spunAt.localeCompare(left.spunAt))[0];
+  const activeGrant = activeRewardSession
+    ? rewardGrants.find((grant) => grant.id === activeRewardSession.rewardGrantId)
+    : undefined;
+  const activeReward = activeGrant
+    ? rewards.find((reward) => reward.id === activeGrant.rewardId)
+    : undefined;
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -81,7 +99,7 @@ export default function SpinScreen() {
   };
 
   const spin = () => {
-    if (!latestCompletion || !cashIn.isValid || isAnimating || pendingSpin) {
+    if (!latestCompletion || !cashIn.isValid || isAnimating || pendingSpin || activeRewardSession) {
       return;
     }
 
@@ -115,11 +133,34 @@ export default function SpinScreen() {
           Cash in matching tokens before spinning. Locked Tier 2 or Tier 3 landings visibly fall
           through to Tier 1.
         </Text>
+        <Text muted>Leave tokens unselected for a Tier 1 spin.</Text>
       </Card>
-      {!latestCompletion ? (
+      {pendingSpin ? (
+        <Card>
+          <Text variant="title">Interrupted spin ready</Text>
+          <Text muted>Finish the saved spin result to continue.</Text>
+          <Button label="Finish interrupted spin" onPress={completeSpin} />
+        </Card>
+      ) : null}
+      {activeRewardSession && activeReward ? (
+        <Card>
+          <Text variant="title">Reward active: {activeReward.name}</Text>
+          <Text muted>Finish or end the active reward before spinning again.</Text>
+          <Button
+            label="Open active reward"
+            onPress={() =>
+              router.push({
+                pathname: '/reward/[id]',
+                params: { id: activeReward.id },
+              })
+            }
+          />
+        </Card>
+      ) : null}
+      {!latestCompletion && !pendingSpin ? (
         <Card>
           <Text variant="title">No rep ready</Text>
-          <Text muted>Complete a habit on Home before spinning.</Text>
+          <Text muted>Complete a new habit rep before spinning.</Text>
         </Card>
       ) : null}
       <Card>
@@ -150,8 +191,26 @@ export default function SpinScreen() {
       {activeBonusChainId ? (
         <Button label="Open bonus round" tone="secondary" onPress={() => router.push('/bonus')} />
       ) : null}
+      {activeRewardSession && activeReward ? (
+        <Button
+          label="Open active reward"
+          tone="secondary"
+          onPress={() =>
+            router.push({
+              pathname: '/reward/[id]',
+              params: { id: activeReward.id },
+            })
+          }
+        />
+      ) : null}
       <Button
-        disabled={!latestCompletion || !cashIn.isValid || isAnimating || Boolean(pendingSpin)}
+        disabled={
+          !latestCompletion ||
+          !cashIn.isValid ||
+          isAnimating ||
+          Boolean(pendingSpin) ||
+          Boolean(activeRewardSession)
+        }
         label={isAnimating || pendingSpin ? 'Spinning' : 'Spin'}
         onPress={spin}
       />

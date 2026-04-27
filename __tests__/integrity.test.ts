@@ -164,6 +164,23 @@ describe('integrity rules', () => {
     });
   });
 
+  it('ignores duplicate check-ins for the same local date', () => {
+    useAppStore.getState().answerIntegrityCheckIn('yes', '2026-04-23T21:00:00Z');
+    useAppStore.getState().answerIntegrityCheckIn('no', '2026-04-23T22:00:00Z');
+
+    expect(useAppStore.getState().integrityCheckIns).toHaveLength(1);
+    expect(useAppStore.getState().integrityRuntime.honestyStreak).toBe(1);
+    expect(useAppStore.getState().integrityRuntime.honestAdmissionCount).toBe(0);
+  });
+
+  it('resets the honesty streak after a skipped day', () => {
+    useAppStore.getState().answerIntegrityCheckIn('yes', '2026-04-23T21:00:00Z');
+    useAppStore.getState().answerIntegrityCheckIn('yes', '2026-04-25T21:00:00Z');
+
+    expect(useAppStore.getState().integrityCheckIns).toHaveLength(2);
+    expect(useAppStore.getState().integrityRuntime.honestyStreak).toBe(1);
+  });
+
   it('surfaces clock tamper through runtime warnings', () => {
     useAppStore.setState((state) => ({
       integrityRuntime: {

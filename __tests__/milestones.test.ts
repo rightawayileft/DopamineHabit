@@ -130,6 +130,47 @@ describe('detectMilestoneUnlocks', () => {
     });
   });
 
+  it('unlocks custom milestones immediately when threshold is already reached', () => {
+    const jar = useAppStore.getState().createJar({
+      id: 'retro-jar',
+      name: 'Retro jar',
+      colorHex: '#46D56E',
+      createdAt: '2026-04-23T12:00:00Z',
+    });
+
+    if (!jar) {
+      throw new Error('Expected retro jar fixture.');
+    }
+
+    useAppStore.setState((state) => ({
+      tokens: [
+        ...state.tokens,
+        {
+          id: 'retro-token',
+          color: 'blue',
+          earnedAt: '2026-04-23T12:01:00Z',
+          state: 'in_inventory',
+          jarId: jar.id,
+        },
+      ],
+    }));
+
+    const milestone = useAppStore.getState().addJarMilestone({
+      id: 'retro-milestone',
+      jarId: jar.id,
+      tokenThreshold: 1,
+      label: 'Already there',
+    });
+
+    expect(milestone?.unlockedAt).toBeDefined();
+    expect(
+      useAppStore
+        .getState()
+        .jars.find((candidate) => candidate.id === jar.id)
+        ?.milestones.find((candidate) => candidate.id === 'retro-milestone')?.unlockedAt,
+    ).toBeDefined();
+  });
+
   it('counts bonus-awarded tokens toward progress and fun money', () => {
     const jar = useAppStore.getState().createJar({
       id: 'bonus-jar',

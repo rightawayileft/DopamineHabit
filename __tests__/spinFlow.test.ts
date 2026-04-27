@@ -54,6 +54,30 @@ const createReadyCompletion = () => {
   return { habit, completion };
 };
 
+const addCashInTokens = ({
+  jarId,
+  count,
+  prefix,
+}: {
+  jarId: string;
+  count: 2 | 3;
+  prefix: string;
+}): string[] => {
+  const tokens: Token[] = Array.from({ length: count }, (_, index) => ({
+    id: `${prefix}-${index + 1}`,
+    color: 'blue',
+    earnedAt: `2026-04-23T13:1${index + 1}:00Z`,
+    state: 'in_inventory',
+    jarId,
+  }));
+
+  useAppStore.setState((state) => ({
+    tokens: [...state.tokens, ...tokens],
+  }));
+
+  return tokens.map((token) => token.id);
+};
+
 describe('spin flow', () => {
   beforeEach(() => {
     resetPersistenceForTests();
@@ -125,9 +149,95 @@ describe('spin flow', () => {
     expect(cashedInTokens.every((token) => token.state === 'cashed_in')).toBe(true);
   });
 
-  it('falls back to the lowest-tier reward when no matching tier reward exists', () => {
+  it('does not prepare another spin for an already spun completion', () => {
     const { completion } = createReadyCompletion();
+
+    useAppStore.getState().prepareSpin({
+      habitCompletionId: completion.id,
+      activatedMaxTier: 1,
+      seed: 'first-spin',
+    });
+    useAppStore.getState().resolvePreparedSpin('spin-result-once');
+    useAppStore.getState().endActiveRewardSession('2026-04-23T13:20:00Z');
+
+    expect(
+      useAppStore.getState().prepareSpin({
+        habitCompletionId: completion.id,
+        activatedMaxTier: 1,
+        seed: 'second-spin',
+      }),
+    ).toBeUndefined();
+    expect(useAppStore.getState().spinResults).toHaveLength(1);
+  });
+
+  it('does not prepare a spin while a reward session is active', () => {
+    const { completion } = createReadyCompletion();
+
+    useAppStore.getState().setActiveRewardSession({
+      rewardGrantId: 'grant-active',
+      expiresAt: '2026-04-23T13:30:00Z',
+    });
+
+    expect(
+      useAppStore.getState().prepareSpin({
+        habitCompletionId: completion.id,
+        activatedMaxTier: 1,
+        seed: 'blocked-active-reward',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('rejects cash-ins with tokens outside the completion habit jar', () => {
+    const { completion } = createReadyCompletion();
+    const secondJar = useAppStore.getState().createJar({
+      id: 'second-jar',
+      name: 'Study',
+      colorHex: '#3D9BFF',
+    });
+
+    if (!secondJar) {
+      throw new Error('Expected second jar.');
+    }
+
+    useAppStore.setState((state) => ({
+      tokens: [
+        ...state.tokens,
+        {
+          id: 'foreign-blue-1',
+          color: 'blue',
+          earnedAt: '2026-04-23T13:11:00Z',
+          state: 'in_inventory',
+          jarId: secondJar.id,
+        },
+        {
+          id: 'foreign-blue-2',
+          color: 'blue',
+          earnedAt: '2026-04-23T13:12:00Z',
+          state: 'in_inventory',
+          jarId: secondJar.id,
+        },
+      ],
+    }));
+
+    expect(
+      useAppStore.getState().prepareSpin({
+        habitCompletionId: completion.id,
+        activatedMaxTier: 2,
+        cashedInTokenIds: ['foreign-blue-1', 'foreign-blue-2'],
+        seed: 'foreign-cash-in',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('falls back to the lowest-tier reward when no matching tier reward exists', () => {
+    const { completion, habit } = createReadyCompletion();
     const seed = findTierTwoAwardSeed();
+    const cashInTokenIds = addCashInTokens({
+      jarId: habit.jarId,
+      count: 2,
+      prefix: 'fallback-cash-in',
+    });
+
     useAppStore.setState((state) => ({
       rewards: state.rewards.map((reward) =>
         reward.tier === 1
@@ -142,6 +252,7 @@ describe('spin flow', () => {
     useAppStore.getState().prepareSpin({
       habitCompletionId: completion.id,
       activatedMaxTier: 2,
+      cashedInTokenIds: cashInTokenIds,
       seed,
     });
     const result = useAppStore.getState().resolvePreparedSpin('spin-result-fallback');

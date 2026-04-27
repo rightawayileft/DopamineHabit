@@ -16,6 +16,7 @@ export function Button({
   style,
   tone = 'primary',
   disabled,
+  accessibilityState,
   ...rest
 }: PropsWithChildren<ButtonProps>) {
   const backgroundColor = tone === 'primary' ? colors.primary : colors.surfaceElevated;
@@ -24,7 +25,10 @@ export function Button({
   return (
     <Pressable
       {...rest}
+      accessibilityRole="button"
+      accessibilityState={{ ...accessibilityState, disabled: Boolean(disabled) }}
       disabled={disabled}
+      hitSlop={8}
       style={({ pressed }) => [
         {
           alignItems: 'center',
@@ -33,6 +37,7 @@ export function Button({
           borderRadius: radius.sm,
           borderWidth: 1,
           opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
+          minHeight: 44,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm,
         },

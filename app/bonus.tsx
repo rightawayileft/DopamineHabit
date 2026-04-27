@@ -29,6 +29,7 @@ export default function BonusScreen() {
   const startBonusSpin = useAppStore((state) => state.startBonusSpin);
   const completeBonusTimer = useAppStore((state) => state.completeBonusTimer);
   const syncBonusChainState = useAppStore((state) => state.syncBonusChainState);
+  const lastCompletionFeedback = useAppStore((state) => state.lastCompletionFeedback);
   const activeBonusChain = activeBonusChainId
     ? bonusChains.find((chain) => chain.id === activeBonusChainId)
     : undefined;
@@ -91,6 +92,15 @@ export default function BonusScreen() {
               ))}
             </View>
           )}
+        </Card>
+      ) : null}
+
+      {lastCompletionFeedback ? (
+        <Card>
+          <Text variant="title">
+            {lastCompletionFeedback.status === 'completed' ? 'Bonus claim' : 'Not yet'}
+          </Text>
+          <Text muted>{lastCompletionFeedback.message}</Text>
         </Card>
       ) : null}
 
