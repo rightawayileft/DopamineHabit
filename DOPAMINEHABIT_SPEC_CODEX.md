@@ -30,12 +30,14 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Step 1 records Naked Rule acceptance.
 - Step 2 creates the first jar, habit, and Tier 1 reward.
 - Step 3 sets the daily check-in time.
+- A post-onboarding next step lets the user add another habit or reward, open Manage, or start the first rep.
 - Onboarding creates the first loop, not the only loop. The app must make expansion discoverable immediately after setup.
 
 ### Habits
 
 - Habits belong to jars.
 - Habits can be created, edited, archived, and restored.
+- Common habit templates can quick-add starter options, but created habits behave like normal editable habits.
 - Archiving prevents new completions but preserves historical completions.
 - Completing a habit creates an append-only `HabitCompletion` and a token tied to the habit jar.
 - Rate limiting must provide user-facing feedback instead of silently failing.
@@ -56,6 +58,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Two matching non-gold tokens activate Tier 2.
 - Three matching non-gold tokens activate Tier 3.
 - Invalid selections must explain why they are invalid.
+- First-spin setup must explain the current state: no rep ready, pending spin recovery, invalid token selection, active reward blocker, or ready to spin.
 - Preparing a spin must reject archived habits, duplicate pending spins, already-spun completions, active reward sessions, and tokens outside the completion habit jar.
 - Pending spins must be recoverable after reload.
 - Reduced motion must skip the long wheel animation and resolve the persisted spin directly.
@@ -63,6 +66,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 ### Rewards
 
 - Rewards can be created, edited, archived, and restored.
+- Common reward templates can quick-add starter tiers, but created rewards behave like normal editable rewards.
 - Reward grants are append-only.
 - Active reward sessions block new spins until ended, completed, or expired.
 - Reward history should explain what was earned, when, and why.

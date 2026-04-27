@@ -32,6 +32,10 @@ export default function JarsScreen() {
 
       <Card>
         <Text variant="title">Add jar</Text>
+        <Text muted>
+          A jar groups tokens from related habits. Milestones and optional fun money are tracked
+          per jar.
+        </Text>
         <JarForm
           submitLabel="Add jar"
           onSubmit={(input) => {

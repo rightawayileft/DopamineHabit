@@ -1,11 +1,14 @@
 import { Redirect, router } from 'expo-router';
+import { View } from 'react-native';
 
 import { HabitForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { quickHabitTemplates } from '@/game/firstLoopGuidance';
 import { useAppStore } from '@/store';
+import { spacing } from '@/theme/spacing';
 
 export default function HabitsScreen() {
   const nakedRuleAcceptedAt = useAppStore((state) => state.settings.nakedRuleAcceptedAt);
@@ -24,6 +27,7 @@ export default function HabitsScreen() {
     (habit) => !habit.archivedAt && !activeJarIds.has(habit.jarId),
   );
   const archivedHabits = habits.filter((habit) => habit.archivedAt);
+  const defaultJarId = activeJars[0]?.id;
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -38,6 +42,10 @@ export default function HabitsScreen() {
 
       <Card>
         <Text variant="title">Add habit</Text>
+        <Text muted>
+          A habit is the small rep that earns a token. Connect it to a jar so the token has
+          somewhere to land.
+        </Text>
         <HabitForm
           activeJars={activeJars}
           submitLabel="Add habit"
@@ -46,6 +54,35 @@ export default function HabitsScreen() {
           }}
         />
       </Card>
+      {defaultJarId ? (
+        <Card>
+          <Text variant="title">Quick habit templates</Text>
+          <Text muted>Use a starter cue now, then edit the wording whenever it fits better.</Text>
+          <View style={{ gap: spacing.sm }}>
+            {quickHabitTemplates.map((template) => {
+              const alreadyAdded = habits.some(
+                (habit) => habit.name.toLowerCase() === template.name.toLowerCase(),
+              );
+
+              return (
+                <Button
+                  key={template.id}
+                  disabled={alreadyAdded}
+                  label={alreadyAdded ? `Added: ${template.name}` : `Add: ${template.name}`}
+                  tone="secondary"
+                  onPress={() =>
+                    createHabit({
+                      name: template.name,
+                      cue: template.cue,
+                      jarId: defaultJarId,
+                    })
+                  }
+                />
+              );
+            })}
+          </View>
+        </Card>
+      ) : null}
 
       {activeHabits.length === 0 ? (
         <Card>

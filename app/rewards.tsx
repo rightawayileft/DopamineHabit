@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 import { RewardForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { quickRewardTemplates } from '@/game/firstLoopGuidance';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
+import { spacing } from '@/theme/spacing';
 
 const formatRemaining = (remainingMs: number): string => {
   const totalSeconds = Math.ceil(remainingMs / 1000);
@@ -73,12 +76,45 @@ export default function RewardsScreen() {
 
       <Card>
         <Text variant="title">Add reward</Text>
+        <Text muted>
+          Rewards are the timed sessions the wheel can grant. Tiers let better cash-ins unlock
+          better options.
+        </Text>
         <RewardForm
           submitLabel="Add reward"
           onSubmit={(input) => {
             createReward(input);
           }}
         />
+      </Card>
+
+      <Card>
+        <Text variant="title">Quick reward templates</Text>
+        <Text muted>Add common reward tiers now and tune the durations later.</Text>
+        <View style={{ gap: spacing.sm }}>
+          {quickRewardTemplates.map((template) => {
+            const alreadyAdded = rewards.some(
+              (reward) => reward.name.toLowerCase() === template.name.toLowerCase(),
+            );
+
+            return (
+              <Button
+                key={template.id}
+                disabled={alreadyAdded}
+                label={alreadyAdded ? `Added: ${template.name}` : `Add: ${template.name}`}
+                tone="secondary"
+                onPress={() =>
+                  createReward({
+                    name: template.name,
+                    tier: template.tier,
+                    durationMinutes: template.durationMinutes,
+                    description: template.description,
+                  })
+                }
+              />
+            );
+          })}
+        </View>
       </Card>
 
       {activeRewards.length === 0 ? (

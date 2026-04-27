@@ -54,6 +54,9 @@ export default function IntegrityCheckInScreen() {
     <Screen>
       <Card>
         <Text variant="display">Integrity</Text>
+        <Text muted>
+          Integrity is the daily no-shame audit of whether the reward gate stayed honest.
+        </Text>
         <Text muted>Daily check-in time: {integrityCheckInTime}</Text>
       </Card>
 

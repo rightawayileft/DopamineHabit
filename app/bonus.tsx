@@ -55,6 +55,10 @@ export default function BonusScreen() {
       <Card>
         <Text variant="display">Bonus</Text>
         <Text muted>
+          Bonus chains are follow-up chances earned from the wheel. Complete the timer rep before
+          it expires to keep the chain moving.
+        </Text>
+        <Text muted>
           Chain {activeBonusChain ? activeBonusChain.spins.length : 0}/{BONUS_CHAIN_MAX}
         </Text>
       </Card>

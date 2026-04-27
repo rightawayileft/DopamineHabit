@@ -21,7 +21,7 @@ export default function OnboardingStepThreeScreen() {
     }
 
     updateSettings({ integrityCheckInTime: checkInTime });
-    router.replace('/');
+    router.replace('/onboarding/next');
   };
 
   return (
@@ -29,8 +29,8 @@ export default function OnboardingStepThreeScreen() {
       <Card>
         <Text variant="display">Set the daily check-in.</Text>
         <Text muted>
-          Default is 21:00 local time. After setup, use Manage to add more options or Home
-          to start the first rep.
+          Default is 21:00 local time. Next, choose whether to add another option or start
+          the first rep.
         </Text>
         <FieldLabel>Check-in time</FieldLabel>
         <Input

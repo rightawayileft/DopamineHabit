@@ -1,5 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { View } from 'react-native';
 
 import { soundManager } from '@/audio/SoundManager';
 import { CashInPanel } from '@/components/CashInPanel';
@@ -11,9 +12,28 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { resolveCashIn } from '@/game/cashIn';
+import {
+  buildFirstSpinChecklist,
+  type FirstSpinChecklistStatus,
+} from '@/game/firstLoopGuidance';
 import { playHapticPattern } from '@/haptics/patterns';
 import { useAppStore } from '@/store';
 import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+
+const checklistStatusLabel: Record<FirstSpinChecklistStatus, string> = {
+  complete: 'Done',
+  available: 'Next',
+  blocked: 'Blocked',
+  locked: 'Locked',
+};
+
+const checklistStatusColor: Record<FirstSpinChecklistStatus, string> = {
+  complete: colors.success,
+  available: colors.primary,
+  blocked: colors.danger,
+  locked: colors.textMuted,
+};
 
 export default function SpinScreen() {
   const nakedRuleAcceptedAt = useAppStore((state) => state.settings.nakedRuleAcceptedAt);
@@ -60,6 +80,16 @@ export default function SpinScreen() {
   const activeReward = activeGrant
     ? rewards.find((reward) => reward.id === activeGrant.rewardId)
     : undefined;
+  const firstSpinChecklist = buildFirstSpinChecklist({
+    hasRepReady: Boolean(latestCompletion),
+    hasPendingSpin: Boolean(pendingSpin),
+    hasActiveReward: Boolean(activeRewardSession),
+    isCashInValid: cashIn.isValid,
+    ...(cashIn.reason === undefined ? {} : { cashInReason: cashIn.reason }),
+    selectedTokenCount: selectedTokens.length,
+    inventoryTokenCount: inventoryTokens.length,
+    activatedMaxTier: cashIn.activatedMaxTier,
+  });
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -140,6 +170,20 @@ export default function SpinScreen() {
           through to Tier 1.
         </Text>
         <Text muted>Leave tokens unselected for a Tier 1 spin.</Text>
+      </Card>
+      <Card>
+        <Text variant="title">{firstSpinChecklist.title}</Text>
+        <Text muted>{firstSpinChecklist.summary}</Text>
+        <View style={{ gap: spacing.sm }}>
+          {firstSpinChecklist.items.map((item) => (
+            <View key={item.id} style={{ gap: spacing.xs }}>
+              <Text style={{ color: checklistStatusColor[item.status] }}>
+                {checklistStatusLabel[item.status]}: {item.label}
+              </Text>
+              <Text muted>{item.detail}</Text>
+            </View>
+          ))}
+        </View>
       </Card>
       {pendingSpin ? (
         <Card>
