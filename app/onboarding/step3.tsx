@@ -28,7 +28,10 @@ export default function OnboardingStepThreeScreen() {
     <Screen centered>
       <Card>
         <Text variant="display">Set the daily check-in.</Text>
-        <Text muted>Default is 21:00 local time.</Text>
+        <Text muted>
+          Default is 21:00 local time. After setup, use Manage to add more options or Home
+          to start the first rep.
+        </Text>
         <FieldLabel>Check-in time</FieldLabel>
         <Input
           autoCapitalize="none"

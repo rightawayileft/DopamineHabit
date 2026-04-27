@@ -28,6 +28,7 @@ export default function SpinScreen() {
   const activeBonusChainId = useAppStore((state) => state.activeBonusChainId);
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
+  const reducedMotion = useAppStore((state) => state.settings.reducedMotion);
   const prepareSpin = useAppStore((state) => state.prepareSpin);
   const resolvePreparedSpin = useAppStore((state) => state.resolvePreparedSpin);
   const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([]);
@@ -118,6 +119,11 @@ export default function SpinScreen() {
     setSelectedTokenIds([]);
     soundManager.setEnabled(soundEnabled);
     void soundManager.play('spinStart');
+    if (reducedMotion) {
+      completeSpin();
+      return;
+    }
+
     startSpin({
       rawLandedSlice: nextPendingSpin.resolvedSpin.rawLandedSlice,
       wasNearMiss: nextPendingSpin.resolvedSpin.wasNearMiss,

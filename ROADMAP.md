@@ -11,6 +11,8 @@ This file is the current handoff map for local and cloud work. The product behav
 - Web target: Expo Router static export to `dist`
 - Preferred web hosting: EAS Hosting
 - Portable fallback: Vercel via `vercel.json`
+- Product quality audit: `PRODUCT_QUALITY_AUDIT.md`
+- Product behavior source of truth: `DOPAMINEHABIT_SPEC_CODEX.md`
 
 ## Completed Checkpoints
 
@@ -24,24 +26,30 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR8 integrity loop: daily check-in UI, honesty streak/admission display, skipped-check-in and clock-tamper messaging, app-seen drift detection, append-only persisted check-in tests.
 - PR9 milestones and fun money: earned/inventory jar progress, default and custom milestones, unlock feedback, optional fun-money balance accounting, bonus-token progress, and persistence tests.
 - Post-PR9 agentic audit hardening: blocked repeat spin exploits, resumable interrupted spins, active reward/session guards, retroactive milestone unlocks, duplicate/skipped integrity check-in handling, and focused UX/accessibility feedback.
+- Product quality audit: researched product-level agent prompt patterns, audited local product flows and persistence risks, and created a PR-sized improvement roadmap in `PRODUCT_QUALITY_AUDIT.md`.
+- PR10 product legibility and navigation: restored the missing product spec, added persistent primary navigation plus a Manage hub, replaced placeholder Settings and Stats routes, surfaced add-more habit/reward/jar affordances from Home/onboarding, added build/local-data visibility, and added stats summary tests.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR10 should focus on polish.
+PR11 should focus on local DB durability and data controls.
 
 Recommended scope:
 
-- Tighten responsive mobile web layouts.
-- Run an accessibility pass for contrast, labels, and touch targets.
-- Improve reduced-motion handling around wheel and bonus flows.
-- Enrich sound/haptic adapters where platform support allows.
-- Add focused tests for reduced-motion and key accessibility states where practical.
+- Add explicit persisted-state versioning and migrations for `APP_STORE_STORAGE_KEY`.
+- Add tests for older persisted envelopes missing newer fields.
+- Add Settings actions for reset local data, export JSON, and import JSON.
+- Add user-facing stale-state recovery copy for web.
+- Document the persistence contract in the repo.
 
 ## Later Checkpoints
 
-- Polish: responsive mobile web layout, accessibility pass, reduced-motion handling, richer sound/haptic adapters.
+- PR12 first-loop expansion and guided setup: post-onboarding next steps, quick-add templates, first-spin checklist, and concept explanations.
+- PR13 spin and reward comprehension: token-to-tier explainer, disabled spin reasons, "why this reward" summaries, and active reward recovery.
+- PR14 integrity reminder and settings completion: real check-in reminders, Settings controls, no-shame recovery copy, and platform fallback tests.
+- PR15 stats, progress, and coaching: replace Stats placeholder with completion, token, reward, fun money, milestone, and integrity insights.
+- PR16 agentic product audit harness: prompt pack, seeded journey states, route-render smoke tests, and six-agent backlog synthesis.
 - Native readiness: EAS build profiles, app icons/splash polish, notification permissions, and store metadata.
 
 ## Cloud Handoff Notes

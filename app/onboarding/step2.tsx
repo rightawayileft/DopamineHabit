@@ -53,7 +53,10 @@ export default function OnboardingStepTwoScreen() {
     <Screen>
       <Card>
         <Text variant="display">Build the first loop.</Text>
-        <Text muted>Your first jar, habit, and Tier 1 reward are linked together.</Text>
+        <Text muted>
+          Start with one jar, one habit, and one Tier 1 reward. You can add more habits,
+          reward options, and jars after setup.
+        </Text>
       </Card>
       <Card>
         <FieldLabel>Jar</FieldLabel>
@@ -97,6 +100,10 @@ export default function OnboardingStepTwoScreen() {
           onChangeText={setDurationMinutes}
           placeholder="3"
         />
+        <Text muted>
+          This reward becomes your first spin outcome. Higher-tier rewards can be added from
+          Manage later.
+        </Text>
         <Button disabled={!canContinue} label="Continue" onPress={continueToTimer} />
       </Card>
     </Screen>

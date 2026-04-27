@@ -62,7 +62,10 @@ export default function HomeScreen() {
     <Screen>
       <Card>
         <Text variant="title">DopamineHabit</Text>
-        <Text muted>Complete a habit rep to draw a token.</Text>
+        <Text muted>
+          Complete a habit rep to draw a token. Add more habits and rewards any time from
+          Manage.
+        </Text>
       </Card>
       {lastCompletionFeedback ? (
         <Card>
@@ -84,12 +87,17 @@ export default function HomeScreen() {
         </View>
       </Card>
       <Card>
-        <Text variant="title">Manage options</Text>
-        <Button label="Habits" tone="secondary" onPress={() => router.push('/habits')} />
-        <Button label="Rewards" tone="secondary" onPress={() => router.push('/rewards')} />
-        <Button label="Jars" tone="secondary" onPress={() => router.push('/jars')} />
+        <Text variant="title">Grow the loop</Text>
+        <Text muted>
+          Your first loop is only a starting point. Add more habit cues, reward choices, and jars
+          as your routines expand.
+        </Text>
+        <Button label="Manage all options" onPress={() => router.push('/manage')} />
+        <Button label="Add habit" tone="secondary" onPress={() => router.push('/habits')} />
+        <Button label="Add reward" tone="secondary" onPress={() => router.push('/rewards')} />
+        <Button label="Add jar" tone="secondary" onPress={() => router.push('/jars')} />
         <Button
-          label="Integrity"
+          label="Integrity check-in"
           tone="secondary"
           onPress={() => router.push('/checkin')}
         />
