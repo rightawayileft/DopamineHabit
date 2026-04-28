@@ -3,6 +3,8 @@ import { View } from 'react-native';
 
 import { soundManager } from '@/audio/SoundManager';
 import { HabitCard } from '@/components/HabitCard';
+import { FirstRepHero } from '@/components/onboarding/FirstRepHero';
+import { TokenRevealCard } from '@/components/onboarding/TokenRevealCard';
 import { TokenInventory } from '@/components/TokenInventory';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -58,6 +60,8 @@ export default function HomeScreen() {
     lastCompletionFeedback.completionId !== undefined &&
     !spunCompletionIds.has(lastCompletionFeedback.completionId);
   const hasRewardLoopStarted = rewardGrants.length > 0;
+  const hasLoggedAnyRep = completions.length > 0;
+  const showFirstRepHero = Boolean(firstHabit) && !hasLoggedAnyRep && !lastCompletionFeedback;
 
   const completeHabit = (habitId: string) => {
     const completion = logHabitCompletion({ habitId });
@@ -75,30 +79,34 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <Card>
-        <Text variant="title">DopamineHabit</Text>
-        <Text muted>Do one rep, draw one token, then spin for the first reward.</Text>
-      </Card>
-      {lastCompletionFeedback ? (
+      {showFirstRepHero && firstHabit ? (
+        <FirstRepHero
+          habit={firstHabit}
+          reward={firstReward}
+          onDone={() => completeHabit(firstHabit.id)}
+        />
+      ) : null}
+      {!showFirstRepHero ? (
         <Card>
-          <Text variant="title">
-            {lastCompletionFeedback.status === 'completed' ? 'Token drawn' : 'Not yet'}
-          </Text>
-          <Text muted>{lastCompletionFeedback.message}</Text>
-          {feedbackCanSpin ? (
-            <>
-              <Text muted>Nice. That token is saved, and Tier 1 spins need no cash-in.</Text>
-              <Button label="Spin now" onPress={() => router.push('/spin')} />
-            </>
-          ) : null}
+          <Text variant="title">DopamineHabit</Text>
+          <Text muted>Do one rep, draw one token, then spin for the first reward.</Text>
         </Card>
+      ) : null}
+      {lastCompletionFeedback ? (
+        <TokenRevealCard
+          canSpin={feedbackCanSpin}
+          message={lastCompletionFeedback.message}
+          onSpin={() => router.push('/spin')}
+          title={lastCompletionFeedback.status === 'completed' ? 'Token earned' : 'Not yet'}
+          tokenColor={lastCompletionFeedback.tokenColor}
+        />
       ) : null}
       <Card>
         <Text variant="title">Today</Text>
         <View style={{ gap: spacing.sm }}>
           <Text muted>Jar: {firstJar?.name ?? 'No active jar'}</Text>
           <Text muted>
-            Tier 1 reward: {firstReward?.name ?? 'No active reward'}
+            First reward: {firstReward?.name ?? 'No active reward'}
             {firstReward?.durationMinutes ? `, ${firstReward.durationMinutes} min` : ''}
           </Text>
           <Text muted>
@@ -128,22 +136,24 @@ export default function HomeScreen() {
             <Text muted>Create or restore a habit from Manage options.</Text>
           </Card>
         ) : null}
-        {activeHabits.map((habit) => (
-          <HabitCard
-            key={habit.id}
-            habit={habit}
-            completionCount={
-              completions.filter((completion) => completion.habitId === habit.id).length
-            }
-            onDone={() => completeHabit(habit.id)}
-            onOpen={() =>
-              router.push({
-                pathname: '/habit/[id]',
-                params: { id: habit.id },
-              })
-            }
-          />
-        ))}
+        {activeHabits.map((habit) =>
+          showFirstRepHero && habit.id === firstHabit?.id ? null : (
+            <HabitCard
+              key={habit.id}
+              habit={habit}
+              completionCount={
+                completions.filter((completion) => completion.habitId === habit.id).length
+              }
+              onDone={() => completeHabit(habit.id)}
+              onOpen={() =>
+                router.push({
+                  pathname: '/habit/[id]',
+                  params: { id: habit.id },
+                })
+              }
+            />
+          ),
+        )}
       </View>
       <Card>
         <Text variant="title">Inventory</Text>

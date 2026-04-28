@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { LoopProgressRail } from '@/components/onboarding/LoopProgressRail';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -20,12 +21,19 @@ export default function OnboardingStepOneScreen() {
   };
 
   return (
-    <Screen centered>
+    <Screen>
       <Card>
-        <Text variant="display">Put one reward behind one tiny rep.</Text>
+        <LoopProgressRail activeStep="rule" />
+      </Card>
+      <Card>
+        <Text variant="display">Try one gated reward loop.</Text>
         <Text>
-          I will let DopamineHabit decide when the reward starts. If I slip, I will come back and
-          reset honestly.
+          DopamineHabit is a self-honesty gate. It helps you pause, do one small effort, and earn
+          a timed reward without pretending the app can physically block you.
+        </Text>
+        <Text muted>
+          If the boundary breaks, you come back and reset without shame. The goal is a clean loop,
+          not perfect behavior.
         </Text>
         <Pressable
           accessibilityRole="checkbox"
@@ -55,9 +63,9 @@ export default function OnboardingStepOneScreen() {
           >
             <Text style={{ color: colors.background }}>{accepted ? 'X' : ''}</Text>
           </View>
-          <Text>I am ready to try one loop.</Text>
+          <Text>I want to try one loop.</Text>
         </Pressable>
-        <Button disabled={!accepted} label="Continue" onPress={continueToSetup} />
+        <Button disabled={!accepted} label="Build my first gate" onPress={continueToSetup} />
       </Card>
     </Screen>
   );

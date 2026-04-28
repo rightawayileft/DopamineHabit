@@ -14,6 +14,26 @@ export interface QuickRewardTemplate {
   description: string;
 }
 
+export interface StarterLoopBundle {
+  id: string;
+  label: string;
+  summary: string;
+  jarName: string;
+  jarColorHex: string;
+  habitName: string;
+  habitCue: string;
+  rewardName: string;
+  rewardDurationMinutes: number;
+  rewardDescription: string;
+}
+
+export interface GatePreviewInput {
+  habitCue: string;
+  habitName: string;
+  rewardName: string;
+  rewardDurationMinutes: string | number;
+}
+
 export type FirstSpinChecklistStatus = 'complete' | 'available' | 'blocked' | 'locked';
 
 export interface FirstSpinChecklistItem {
@@ -94,6 +114,69 @@ export const quickRewardTemplates: readonly QuickRewardTemplate[] = [
     description: 'A rare top reward for the biggest outcome.',
   },
 ];
+
+export const starterLoopBundles: readonly StarterLoopBundle[] = [
+  {
+    id: 'focus-scroll',
+    label: 'Focus + scroll',
+    summary: 'Pause the phone pull with one tiny reset.',
+    jarName: 'Focus',
+    jarColorHex: '#6BE3FF',
+    habitName: 'Five slow breaths',
+    habitCue: 'When I reach for my phone',
+    rewardName: 'Short scroll break',
+    rewardDurationMinutes: 3,
+    rewardDescription: 'A short, bounded scroll session after a real pause.',
+  },
+  {
+    id: 'fitness-phone',
+    label: 'Fitness + phone',
+    summary: 'Trade a quick body rep for a timed phone reward.',
+    jarName: 'Fitness',
+    jarColorHex: '#46D56E',
+    habitName: 'Drink water',
+    habitCue: 'Before opening a reward app',
+    rewardName: 'Favorite phone game',
+    rewardDurationMinutes: 3,
+    rewardDescription: 'A quick game session that starts only after the rep.',
+  },
+  {
+    id: 'chores-video',
+    label: 'Chores + video',
+    summary: 'Make the first minute of cleanup unlock a video break.',
+    jarName: 'Home',
+    jarColorHex: '#FF9933',
+    habitName: 'Clear one surface',
+    habitCue: 'Before sitting down to watch',
+    rewardName: 'Short video break',
+    rewardDurationMinutes: 5,
+    rewardDescription: 'One contained video break after a visible reset.',
+  },
+  {
+    id: 'study-game',
+    label: 'Study + game',
+    summary: 'Start with one study action before a game window.',
+    jarName: 'Study',
+    jarColorHex: '#B866FF',
+    habitName: 'Open notes for two minutes',
+    habitCue: 'When I want to play',
+    rewardName: 'Favorite game',
+    rewardDurationMinutes: 7,
+    rewardDescription: 'A stronger reward window after starting the study loop.',
+  },
+];
+
+export const buildGatePreviewText = ({
+  habitCue,
+  habitName,
+  rewardDurationMinutes,
+  rewardName,
+}: GatePreviewInput): string =>
+  `When ${habitCue.trim() || 'the pull starts'}, I will do ${
+    habitName.trim() || 'one tiny rep'
+  } to unlock ${String(rewardDurationMinutes).trim() || '3'} minutes of ${
+    rewardName.trim() || 'my reward'
+  }.`;
 
 const tierLabel = (tier: 1 | 2 | 3): string => `Tier ${tier}`;
 

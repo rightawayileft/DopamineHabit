@@ -28,9 +28,9 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 ### Onboarding
 
 - Step 1 records Naked Rule acceptance.
-- Step 2 creates the first jar, habit, and Tier 1 reward.
-- Step 3 sets the daily check-in time.
-- A post-onboarding next step lets the user add another habit or reward, open Manage, or start the first rep.
+- Step 2 creates the first jar, habit, and Tier 1 reward from editable starter bundles, with a live gate preview.
+- Step 3 sets or accepts the daily check-in time as a no-shame repair ritual.
+- A post-onboarding next step prioritizes starting the first rep and keeps extra setup available behind an optional customization affordance.
 - Onboarding creates the first loop, not the only loop. The app must make expansion discoverable immediately after setup.
 
 ### Habits

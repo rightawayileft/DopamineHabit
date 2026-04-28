@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 
+import { LoopProgressRail } from '@/components/onboarding/LoopProgressRail';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FieldLabel } from '@/components/ui/FieldLabel';
@@ -24,14 +25,27 @@ export default function OnboardingStepThreeScreen() {
     router.replace('/onboarding/next');
   };
 
+  const useDefaultTime = () => {
+    updateSettings({ integrityCheckInTime: '21:00' });
+    router.replace('/onboarding/next');
+  };
+
   return (
-    <Screen centered>
+    <Screen>
       <Card>
-        <Text variant="display">Set the daily check-in.</Text>
+        <LoopProgressRail activeStep="checkin" />
+      </Card>
+      <Card>
+        <Text variant="display">Choose the repair check-in.</Text>
         <Text muted>
-          Default is 21:00 local time. Next, choose whether to add another option or start
-          the first rep.
+          Once a day, DopamineHabit asks whether the gate stayed honest. This is a reset ritual,
+          not a grade.
         </Text>
+        <Button label="Use 9:00 PM" onPress={useDefaultTime} />
+      </Card>
+      <Card>
+        <Text variant="title">Customize check-in time</Text>
+        <Text muted>Use 24-hour local time. You can change this later in Settings.</Text>
         <FieldLabel>Check-in time</FieldLabel>
         <Input
           autoCapitalize="none"
@@ -40,7 +54,12 @@ export default function OnboardingStepThreeScreen() {
           placeholder="21:00"
           value={checkInTime}
         />
-        <Button disabled={!isValidTime} label="Finish setup" onPress={finishOnboarding} />
+        <Button
+          disabled={!isValidTime}
+          label="Use this time"
+          onPress={finishOnboarding}
+          tone="secondary"
+        />
       </Card>
     </Screen>
   );

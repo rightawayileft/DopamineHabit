@@ -1,10 +1,41 @@
 import {
+  buildGatePreviewText,
   buildFirstSpinChecklist,
   quickHabitTemplates,
   quickRewardTemplates,
+  starterLoopBundles,
 } from '@/game/firstLoopGuidance';
 
 describe('first loop guidance', () => {
+  it('ships starter loop bundles with editable defaults', () => {
+    expect(starterLoopBundles.map((bundle) => bundle.id)).toEqual(
+      expect.arrayContaining(['focus-scroll', 'fitness-phone', 'chores-video', 'study-game']),
+    );
+    expect(starterLoopBundles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          habitCue: expect.any(String),
+          habitName: expect.any(String),
+          rewardDurationMinutes: expect.any(Number),
+          rewardName: expect.any(String),
+        }),
+      ]),
+    );
+  });
+
+  it('builds a live gate preview sentence', () => {
+    expect(
+      buildGatePreviewText({
+        habitCue: 'I reach for my phone',
+        habitName: 'five slow breaths',
+        rewardDurationMinutes: 3,
+        rewardName: 'short scroll break',
+      }),
+    ).toBe(
+      'When I reach for my phone, I will do five slow breaths to unlock 3 minutes of short scroll break.',
+    );
+  });
+
   it('ships practical quick-add templates', () => {
     expect(quickHabitTemplates.length).toBeGreaterThanOrEqual(3);
     expect(quickRewardTemplates.map((reward) => reward.tier)).toEqual(

@@ -201,6 +201,7 @@ export interface InitialOnboardingSetupInput {
   habitCue?: string;
   rewardName: string;
   rewardDurationMinutes: number;
+  rewardDescription?: string;
   createdAt?: ISODate;
 }
 
@@ -966,6 +967,7 @@ export const useAppStore = create<AppStore>()(
         habitCue,
         rewardName,
         rewardDurationMinutes,
+        rewardDescription,
         createdAt = nowIso(),
       }) => {
         const jar: Jar = {
@@ -990,6 +992,7 @@ export const useAppStore = create<AppStore>()(
           name: rewardName.trim(),
           tier: 1,
           durationMinutes: rewardDurationMinutes,
+          ...(rewardDescription?.trim() ? { description: rewardDescription.trim() } : {}),
         };
 
         set((state) => ({
