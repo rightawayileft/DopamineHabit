@@ -7,6 +7,7 @@ export interface SettingsSlice {
 export const createInitialSettingsSlice = (): SettingsSlice => ({
   settings: {
     integrityCheckInTime: '21:00',
+    checkInReminderEnabled: false,
     hapticsEnabled: true,
     soundEnabled: true,
     reducedMotion: false,

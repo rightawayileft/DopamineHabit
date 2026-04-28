@@ -213,7 +213,7 @@ interface PersistedEnvelope {
   version: number;
 }
 
-export const APP_STORE_PERSIST_VERSION = 1;
+export const APP_STORE_PERSIST_VERSION = 2;
 
 export interface ImportLocalDataResult {
   status: 'imported' | 'failed';
@@ -393,6 +393,10 @@ const normalizeSettings = (value: unknown, fallback: UserSettings): UserSettings
 
   return {
     integrityCheckInTime: optionalString(settings.integrityCheckInTime) ?? fallback.integrityCheckInTime,
+    checkInReminderEnabled:
+      typeof settings.checkInReminderEnabled === 'boolean'
+        ? settings.checkInReminderEnabled
+        : fallback.checkInReminderEnabled,
     hapticsEnabled:
       typeof settings.hapticsEnabled === 'boolean' ? settings.hapticsEnabled : fallback.hapticsEnabled,
     soundEnabled:

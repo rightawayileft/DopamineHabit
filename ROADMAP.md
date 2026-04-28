@@ -32,23 +32,23 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR11 local DB durability and data controls: added persisted-state versioning, migration helpers, old-envelope migration tests, Settings export/import/reset controls, stale-state recovery copy, and `docs/PERSISTENCE.md`.
 - PR12 first-loop expansion and guided setup: added a post-onboarding next-step route, quick-add habit/reward templates, contextual concept copy, first-spin checklist state, and focused guidance tests.
 - PR13 spin and reward comprehension: added a token-to-tier cash-in explainer, direct disabled-spin reasons, detailed post-spin outcome explanations, active reward recovery context, and focused comprehension tests.
+- PR14 integrity reminder and settings completion: added a persisted reminder toggle, permission-aware local notification scheduling, Settings reminder status, Home check-in prompt, and no-shame integrity recovery copy.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR14 should focus on integrity reminder and settings completion.
+PR15 should focus on stats, progress, and coaching.
 
 Recommended scope:
 
-- Implement `useCheckInReminder` for supported platforms with permission-aware behavior.
-- Add Settings controls for check-in time, haptics, sound, reduced motion, and notification status.
-- Add no-shame copy for missed or partial check-ins.
-- Add reminder scheduling tests where practical, plus platform fallback tests.
+- Replace `Stats` placeholder with completion trends, token earnings, spin outcomes, reward grants, fun money, milestones, and integrity streaks.
+- Add simple "next best action" coaching based on local state.
+- Add filters for habit, jar, and timeframe.
+- Add empty states that guide the user back into the loop.
 
 ## Later Checkpoints
 
-- PR14 integrity reminder and settings completion: real check-in reminders, Settings controls, no-shame recovery copy, and platform fallback tests.
 - PR15 stats, progress, and coaching: replace Stats placeholder with completion, token, reward, fun money, milestone, and integrity insights.
 - PR16 agentic product audit harness: prompt pack, seeded journey states, route-render smoke tests, and six-agent backlog synthesis.
 - Native readiness: EAS build profiles, app icons/splash polish, notification permissions, and store metadata.

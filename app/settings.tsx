@@ -8,6 +8,8 @@ import { FieldLabel } from '@/components/ui/FieldLabel';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { buildReminderStatusCopy } from '@/game/checkInReminder';
+import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { APP_STORE_STORAGE_KEY } from '@/store/persistence';
 import { APP_STORE_PERSIST_VERSION, useAppStore } from '@/store';
 import { colors } from '@/theme/colors';
@@ -24,10 +26,47 @@ export default function SettingsScreen() {
   const [exportJson, setExportJson] = useState('');
   const [importJson, setImportJson] = useState('');
   const [importMessage, setImportMessage] = useState<string | undefined>(undefined);
+  const [reminderMessage, setReminderMessage] = useState<string | undefined>(undefined);
   const [resetArmed, setResetArmed] = useState(false);
   const validCheckInTime = isValidLocalTime(checkInTime);
+  const reminder = useCheckInReminder(
+    settings.integrityCheckInTime,
+    settings.checkInReminderEnabled,
+  );
+  const reminderStatus = buildReminderStatusCopy({
+    enabled: settings.checkInReminderEnabled,
+    time: settings.integrityCheckInTime,
+    permissionState: reminder.permissionState,
+    ...(reminder.errorMessage === undefined ? {} : { errorMessage: reminder.errorMessage }),
+  });
+  const reminderButtonDisabled =
+    !settings.checkInReminderEnabled &&
+    (reminder.permissionState === 'unsupported' ||
+      reminder.permissionState === 'denied' ||
+      reminder.permissionState === 'unknown' ||
+      !validCheckInTime);
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;
   const projectIdText = typeof projectId === 'string' ? projectId : 'Not linked';
+
+  const toggleReminder = async () => {
+    setReminderMessage(undefined);
+
+    if (settings.checkInReminderEnabled) {
+      updateSettings({ checkInReminderEnabled: false });
+      setReminderMessage('Daily reminder turned off.');
+      return;
+    }
+
+    const granted = await reminder.requestPermission();
+
+    if (!granted) {
+      setReminderMessage('Reminder permission was not granted. You can still check in manually.');
+      return;
+    }
+
+    updateSettings({ checkInReminderEnabled: true });
+    setReminderMessage(`Daily reminder will use ${settings.integrityCheckInTime}.`);
+  };
 
   if (!settings.nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -45,7 +84,7 @@ export default function SettingsScreen() {
       <Card>
         <Text variant="title">Daily integrity check-in</Text>
         <Text muted>
-          The app records one answer per local day. Reminder scheduling is planned next.
+          The app records one answer per local day. Reminders are gentle nudges, not alarms.
         </Text>
         <FieldLabel>Check-in time</FieldLabel>
         <Input
@@ -62,8 +101,30 @@ export default function SettingsScreen() {
         <Button
           disabled={!validCheckInTime || checkInTime === settings.integrityCheckInTime}
           label="Save check-in time"
-          onPress={() => updateSettings({ integrityCheckInTime: checkInTime })}
+          onPress={() => {
+            updateSettings({ integrityCheckInTime: checkInTime });
+            setReminderMessage(
+              settings.checkInReminderEnabled
+                ? `Reminder will reschedule for ${checkInTime}.`
+                : 'Check-in time saved.',
+            );
+          }}
         />
+        <Text variant="title">{reminderStatus.title}</Text>
+        <Text muted>{reminderStatus.message}</Text>
+        <Button
+          disabled={reminderButtonDisabled}
+          label={
+            settings.checkInReminderEnabled
+              ? 'Disable daily reminder'
+              : reminderStatus.actionLabel
+          }
+          tone={settings.checkInReminderEnabled ? 'primary' : 'secondary'}
+          onPress={() => {
+            void toggleReminder();
+          }}
+        />
+        {reminderMessage ? <Text muted>{reminderMessage}</Text> : null}
       </Card>
 
       <Card>

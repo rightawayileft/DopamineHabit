@@ -1,5 +1,6 @@
 import { Redirect } from 'expo-router';
 
+import { buildIntegrityRecoveryCopy } from '@/game/checkInReminder';
 import { buildIntegrityDisplayInputs } from '@/game/integrity';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -45,6 +46,7 @@ export default function IntegrityCheckInScreen() {
   const sortedCheckIns = integrityCheckIns
     .slice()
     .sort((left, right) => right.answeredAt.localeCompare(left.answeredAt));
+  const recoveryCopy = buildIntegrityRecoveryCopy(display);
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -62,6 +64,8 @@ export default function IntegrityCheckInScreen() {
 
       <Card>
         <Text variant="title">Today</Text>
+        <Text>{recoveryCopy.title}</Text>
+        <Text muted>{recoveryCopy.message}</Text>
         {display.todayCheckIn ? (
           <Text muted>Checked in: {answerLabel(display.todayCheckIn.answer)}</Text>
         ) : (

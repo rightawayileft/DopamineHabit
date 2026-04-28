@@ -125,6 +125,7 @@ export interface IntegrityCheckIn {
 
 export interface UserSettings {
   integrityCheckInTime: string;
+  checkInReminderEnabled: boolean;
   hapticsEnabled: boolean;
   soundEnabled: boolean;
   reducedMotion: boolean;

@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { findCheckInForDate } from '@/game/integrity';
 import { playHapticPattern } from '@/haptics/patterns';
 import { useAppStore } from '@/store';
 import { spacing } from '@/theme/spacing';
+import { toLocalDateKey } from '@/utils/date';
 
 export default function HomeScreen() {
   const nakedRuleAcceptedAt = useAppStore((state) => state.settings.nakedRuleAcceptedAt);
@@ -18,9 +20,13 @@ export default function HomeScreen() {
   const jars = useAppStore((state) => state.jars);
   const rewards = useAppStore((state) => state.rewards);
   const completions = useAppStore((state) => state.completions);
+  const integrityCheckIns = useAppStore((state) => state.integrityCheckIns);
   const tokens = useAppStore((state) => state.tokens);
   const lastCompletionFeedback = useAppStore((state) => state.lastCompletionFeedback);
   const integrityCheckInTime = useAppStore((state) => state.settings.integrityCheckInTime);
+  const checkInReminderEnabled = useAppStore(
+    (state) => state.settings.checkInReminderEnabled,
+  );
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
   const logHabitCompletion = useAppStore((state) => state.logHabitCompletion);
@@ -43,6 +49,7 @@ export default function HomeScreen() {
   const firstJar = activeJars[0];
   const firstReward = activeRewards[0];
   const inventoryTokens = tokens.filter((token) => token.state === 'in_inventory');
+  const todayCheckIn = findCheckInForDate(integrityCheckIns, toLocalDateKey());
 
   const completeHabit = (habitId: string) => {
     const completion = logHabitCompletion({ habitId });
@@ -86,6 +93,20 @@ export default function HomeScreen() {
           <Text muted>Integrity check-in: {integrityCheckInTime}</Text>
         </View>
       </Card>
+      {!todayCheckIn ? (
+        <Card>
+          <Text variant="title">Integrity check-in is open</Text>
+          <Text muted>
+            One honest answer today keeps the gate trustworthy. Reminder:{' '}
+            {checkInReminderEnabled ? 'on' : 'off'} at {integrityCheckInTime}.
+          </Text>
+          <Button
+            label="Answer today's check-in"
+            tone="secondary"
+            onPress={() => router.push('/checkin')}
+          />
+        </Card>
+      ) : null}
       <Card>
         <Text variant="title">Grow the loop</Text>
         <Text muted>

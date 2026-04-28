@@ -1,6 +1,6 @@
 # DopamineHabit Product Spec
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 This file is the local source of truth for product behavior. `ROADMAP.md` records PR-sized delivery order, while this spec describes the intended product model and durable invariants.
 
@@ -90,10 +90,13 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Partial or no answers count as honest admissions without shame-heavy copy.
 - Clock drift warnings should be visible without blocking the loop.
 - Reminder scheduling should respect the check-in time where platform support allows.
+- Users should be able to enable or disable a gentle daily check-in reminder from Settings.
+- Missed or partial check-ins should be framed as useful recovery signals, not failure states.
 
 ### Settings
 
 - Settings should expose haptics, sound, reduced motion, check-in time, build/version information, and local data controls.
+- Settings should show notification permission/reminder status when daily reminders are configured.
 - Destructive local data actions must require confirmation.
 - Local DB reset/export/import belongs to the durability checkpoint.
 

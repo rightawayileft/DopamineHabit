@@ -51,6 +51,7 @@ describe('persistence migrations', () => {
         settings: {
           nakedRuleAcceptedAt: '2026-04-23T12:00:00Z',
           integrityCheckInTime: '21:00',
+          checkInReminderEnabled: false,
           hapticsEnabled: true,
           soundEnabled: true,
           reducedMotion: false,
@@ -104,6 +105,7 @@ describe('persistence migrations', () => {
     expect(migrated.jars[0]?.milestones.length).toBeGreaterThan(0);
     expect(migrated.completions[0]?.wasBonusRep).toBe(false);
     expect(migrated.settings.integrityCheckInTime).toBe('21:00');
+    expect(migrated.settings.checkInReminderEnabled).toBe(false);
   });
 
   it('exports, imports, and resets local data through store actions', () => {
