@@ -1,27 +1,82 @@
 import { Redirect, router } from 'expo-router';
+import { useState } from 'react';
+import { View, type DimensionValue } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
-import { buildStatsSummary, formatCents } from '@/game/stats';
+import {
+  buildProgressDashboard,
+  buildStatsSummary,
+  formatCents,
+  type StatsTimeframe,
+} from '@/game/stats';
 import { useAppStore } from '@/store';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
+
+const timeframes: { id: StatsTimeframe; label: string }[] = [
+  { id: '7d', label: '7 days' },
+  { id: '30d', label: '30 days' },
+  { id: 'all', label: 'All' },
+];
+
+const tokenColor = (label: string): string =>
+  colors.tokenColors[label as keyof typeof colors.tokenColors] ?? colors.border;
 
 export default function StatsScreen() {
+  const [timeframe, setTimeframe] = useState<StatsTimeframe>('7d');
+  const [selectedHabitId, setSelectedHabitId] = useState<string | undefined>(undefined);
+  const [selectedJarId, setSelectedJarId] = useState<string | undefined>(undefined);
   const nakedRuleAcceptedAt = useAppStore((state) => state.settings.nakedRuleAcceptedAt);
-  const summary = useAppStore((state) =>
-    buildStatsSummary({
-      habits: state.habits,
-      jars: state.jars,
-      rewards: state.rewards,
-      completions: state.completions,
-      tokens: state.tokens,
-      spinResults: state.spinResults,
-      rewardGrants: state.rewardGrants,
-      activeRewardSession: state.activeRewardSession,
-      integrityCheckIns: state.integrityCheckIns,
-      integrityRuntime: state.integrityRuntime,
-    }),
+  const habits = useAppStore((state) => state.habits);
+  const jars = useAppStore((state) => state.jars);
+  const rewards = useAppStore((state) => state.rewards);
+  const completions = useAppStore((state) => state.completions);
+  const tokens = useAppStore((state) => state.tokens);
+  const spinResults = useAppStore((state) => state.spinResults);
+  const rewardGrants = useAppStore((state) => state.rewardGrants);
+  const activeRewardSession = useAppStore((state) => state.activeRewardSession);
+  const integrityCheckIns = useAppStore((state) => state.integrityCheckIns);
+  const integrityRuntime = useAppStore((state) => state.integrityRuntime);
+  const summary = buildStatsSummary({
+    habits,
+    jars,
+    rewards,
+    completions,
+    tokens,
+    spinResults,
+    rewardGrants,
+    activeRewardSession,
+    integrityCheckIns,
+    integrityRuntime,
+  });
+  const dashboard = buildProgressDashboard({
+    habits,
+    jars,
+    rewards,
+    completions,
+    tokens,
+    spinResults,
+    rewardGrants,
+    activeRewardSession,
+    integrityCheckIns,
+    integrityRuntime,
+    filters: {
+      timeframe,
+      ...(selectedHabitId === undefined ? {} : { habitId: selectedHabitId }),
+      ...(selectedJarId === undefined ? {} : { jarId: selectedJarId }),
+    },
+  });
+  const activeJars = jars.filter((jar) => !jar.archivedAt);
+  const activeJarIds = new Set(activeJars.map((jar) => jar.id));
+  const activeHabits = habits.filter(
+    (habit) => !habit.archivedAt && activeJarIds.has(habit.jarId),
+  );
+  const maxTrendCount = Math.max(
+    1,
+    ...dashboard.completionTrend.map((bucket) => bucket.completionCount),
   );
 
   if (!nakedRuleAcceptedAt) {
@@ -33,8 +88,54 @@ export default function StatsScreen() {
       <Card>
         <Text variant="display">Stats</Text>
         <Text muted>
-          A local-first snapshot of reps, tokens, rewards, milestones, and integrity.
+          Momentum, reward energy, and the next gentle move. Filter it down when you want a
+          clearer signal.
         </Text>
+      </Card>
+
+      <Card>
+        <Text variant="title">Focus</Text>
+        <Text muted>{dashboard.activeFilterLabel}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {timeframes.map((candidate) => (
+            <Button
+              key={candidate.id}
+              label={candidate.label}
+              tone={timeframe === candidate.id ? 'primary' : 'secondary'}
+              onPress={() => setTimeframe(candidate.id)}
+            />
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <Button
+            label="All jars"
+            tone={selectedJarId === undefined ? 'primary' : 'secondary'}
+            onPress={() => setSelectedJarId(undefined)}
+          />
+          {activeJars.map((jar) => (
+            <Button
+              key={jar.id}
+              label={jar.name}
+              tone={selectedJarId === jar.id ? 'primary' : 'secondary'}
+              onPress={() => setSelectedJarId(jar.id)}
+            />
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <Button
+            label="All habits"
+            tone={selectedHabitId === undefined ? 'primary' : 'secondary'}
+            onPress={() => setSelectedHabitId(undefined)}
+          />
+          {activeHabits.map((habit) => (
+            <Button
+              key={habit.id}
+              label={habit.name}
+              tone={selectedHabitId === habit.id ? 'primary' : 'secondary'}
+              onPress={() => setSelectedHabitId(habit.id)}
+            />
+          ))}
+        </View>
       </Card>
 
       <Card>
@@ -48,6 +149,99 @@ export default function StatsScreen() {
       </Card>
 
       <Card>
+        <Text variant="title">Momentum score</Text>
+        <Text variant="display" style={{ fontVariant: ['tabular-nums'] }}>
+          {dashboard.momentumScore}
+        </Text>
+        <Text muted>
+          Reps, tokens, rewards, and honesty streaks all add weight. It is not a grade; it is a
+          pulse.
+        </Text>
+        <Text muted>Reps in focus: {dashboard.filteredCompletionCount}</Text>
+        <Text muted>Bonus reps in focus: {dashboard.filteredBonusCompletionCount}</Text>
+        <Text muted>Tokens earned in focus: {dashboard.filteredTokenCount}</Text>
+      </Card>
+
+      <Card>
+        <Text variant="title">Coaching</Text>
+        {dashboard.coachingCards.map((card) => (
+          <View key={card.title} style={{ gap: spacing.xs }}>
+            <Text>{card.title}</Text>
+            <Text muted>{card.message}</Text>
+            <Button label={card.label} tone="secondary" onPress={() => router.push(card.route)} />
+          </View>
+        ))}
+      </Card>
+
+      <Card>
+        <Text variant="title">Rep rhythm</Text>
+        <View style={{ gap: spacing.sm }}>
+          {dashboard.completionTrend.map((bucket) => {
+            const width = `${Math.max(
+              8,
+              Math.round((bucket.completionCount / maxTrendCount) * 100),
+            )}%` as DimensionValue;
+
+            return (
+              <View key={bucket.date} style={{ gap: spacing.xs }}>
+                <Text muted>
+                  {bucket.date}: {bucket.completionCount}
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: colors.surfaceElevated,
+                    borderRadius: radius.pill,
+                    height: 10,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: bucket.completionCount > 0 ? colors.success : colors.border,
+                      borderRadius: radius.pill,
+                      height: 10,
+                      width,
+                    }}
+                  />
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </Card>
+
+      <Card>
+        <Text variant="title">Reward energy</Text>
+        <Text muted>Spins in focus: {dashboard.filteredSpinCount}</Text>
+        <Text muted>Reward grants in focus: {dashboard.filteredRewardGrantCount}</Text>
+        {dashboard.tokenColorCounts.length === 0 ? <Text muted>No tokens in this focus yet.</Text> : null}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {dashboard.tokenColorCounts.map((bucket) => (
+            <View
+              key={bucket.label}
+              style={{
+                alignItems: 'center',
+                backgroundColor: tokenColor(bucket.label),
+                borderRadius: radius.sm,
+                minWidth: 64,
+                padding: spacing.sm,
+              }}
+            >
+              <Text style={{ color: colors.background }}>{bucket.label}</Text>
+              <Text style={{ color: colors.background, fontVariant: ['tabular-nums'] }}>
+                {bucket.count}
+              </Text>
+            </View>
+          ))}
+        </View>
+        {dashboard.spinOutcomeCounts.map((bucket) => (
+          <Text key={bucket.label} muted>
+            {bucket.label}: {bucket.count}
+          </Text>
+        ))}
+      </Card>
+
+      <Card>
         <Text variant="title">Loop setup</Text>
         <Text muted>Active habits: {summary.activeHabitCount}</Text>
         <Text muted>Active rewards: {summary.activeRewardCount}</Text>
@@ -56,20 +250,11 @@ export default function StatsScreen() {
       </Card>
 
       <Card>
-        <Text variant="title">Momentum</Text>
+        <Text variant="title">Totals</Text>
         <Text muted>Total reps: {summary.totalCompletions}</Text>
-        <Text muted>Bonus reps: {summary.bonusCompletionCount}</Text>
         <Text muted>Total tokens: {summary.totalTokenCount}</Text>
-        <Text muted>Inventory tokens: {summary.inventoryTokenCount}</Text>
         <Text muted>Cashed-in tokens: {summary.cashedInTokenCount}</Text>
-      </Card>
-
-      <Card>
-        <Text variant="title">Rewards and milestones</Text>
-        <Text muted>Spins resolved: {summary.spinCount}</Text>
         <Text muted>Reward grants: {summary.rewardGrantCount}</Text>
-        <Text muted>Completed reward sessions: {summary.completedRewardGrantCount}</Text>
-        <Text muted>Active reward sessions: {summary.activeRewardCountNow}</Text>
         <Text muted>
           Milestones unlocked: {summary.unlockedMilestoneCount}/{summary.totalMilestoneCount}
         </Text>

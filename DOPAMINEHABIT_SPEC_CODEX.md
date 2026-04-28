@@ -104,6 +104,8 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 
 - Stats should summarize setup, reps, tokens, spins, reward grants, milestones, fun money, integrity, and next best action.
 - Stats must be useful with zero data, early data, and mature data.
+- Stats should support timeframe, jar, and habit filters for focused progress review.
+- Stats should translate raw local data into coaching cues, visible rhythm, and reward-energy signals.
 
 ## Persistence Invariants
 

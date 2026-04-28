@@ -9,10 +9,12 @@ import type {
   RewardGrant,
   SpinResult,
   Token,
+  TokenColor,
 } from '@/store/types';
 import { toLocalDateKey } from '@/utils/date';
 
 export type StatsRoute = '/' | '/checkin' | '/habits' | '/jars' | '/manage' | '/rewards' | '/spin';
+export type StatsTimeframe = '7d' | '30d' | 'all';
 
 export interface NextAction {
   title: string;
@@ -44,6 +46,44 @@ export interface StatsSummary {
   nextAction: NextAction;
 }
 
+export interface StatsFilters {
+  timeframe: StatsTimeframe;
+  habitId?: string;
+  jarId?: string;
+  todayKey?: string;
+}
+
+export interface TrendBucket {
+  date: string;
+  completionCount: number;
+}
+
+export interface CountBucket {
+  label: string;
+  count: number;
+}
+
+export interface CoachingCard {
+  title: string;
+  message: string;
+  route: StatsRoute;
+  label: string;
+}
+
+export interface ProgressDashboard {
+  activeFilterLabel: string;
+  filteredCompletionCount: number;
+  filteredBonusCompletionCount: number;
+  filteredTokenCount: number;
+  filteredSpinCount: number;
+  filteredRewardGrantCount: number;
+  momentumScore: number;
+  completionTrend: TrendBucket[];
+  tokenColorCounts: CountBucket[];
+  spinOutcomeCounts: CountBucket[];
+  coachingCards: CoachingCard[];
+}
+
 export interface BuildStatsSummaryInput {
   habits: Habit[];
   jars: Jar[];
@@ -56,6 +96,10 @@ export interface BuildStatsSummaryInput {
   integrityCheckIns: IntegrityCheckIn[];
   integrityRuntime: IntegrityRuntime;
   todayKey?: string;
+}
+
+export interface BuildProgressDashboardInput extends BuildStatsSummaryInput {
+  filters: StatsFilters;
 }
 
 const mostCompletedHabitName = (
@@ -72,6 +116,105 @@ const mostCompletedHabitName = (
 };
 
 export const formatCents = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
+
+const dateKeyFromIso = (timestamp: string): string => toLocalDateKey(new Date(timestamp));
+
+const subtractDays = (dateKey: string, days: number): string => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() - days);
+
+  return toLocalDateKey(date);
+};
+
+const timeframeLabel = (timeframe: StatsTimeframe): string => {
+  if (timeframe === '7d') {
+    return 'last 7 days';
+  }
+
+  if (timeframe === '30d') {
+    return 'last 30 days';
+  }
+
+  return 'all time';
+};
+
+const inTimeframe = (timestamp: string, timeframe: StatsTimeframe, todayKey: string): boolean => {
+  if (timeframe === 'all') {
+    return true;
+  }
+
+  const startKey = subtractDays(todayKey, timeframe === '7d' ? 6 : 29);
+  const dateKey = dateKeyFromIso(timestamp);
+
+  return dateKey >= startKey && dateKey <= todayKey;
+};
+
+const buildTrend = (
+  completions: HabitCompletion[],
+  todayKey: string,
+  dayCount: number,
+): TrendBucket[] => {
+  const buckets = Array.from({ length: dayCount }, (_, index) => {
+    const date = subtractDays(todayKey, dayCount - index - 1);
+
+    return {
+      date,
+      completionCount: 0,
+    };
+  });
+  const bucketByDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
+
+  completions.forEach((completion) => {
+    const bucket = bucketByDate.get(dateKeyFromIso(completion.completedAt));
+
+    if (bucket) {
+      bucket.completionCount += 1;
+    }
+  });
+
+  return buckets;
+};
+
+const countByTokenColor = (tokens: Token[]): CountBucket[] => {
+  const colorOrder: TokenColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gold'];
+  const counts = tokens.reduce<Record<TokenColor, number>>(
+    (accumulator, token) => ({
+      ...accumulator,
+      [token.color]: accumulator[token.color] + 1,
+    }),
+    {
+      red: 0,
+      orange: 0,
+      yellow: 0,
+      green: 0,
+      blue: 0,
+      purple: 0,
+      gold: 0,
+    },
+  );
+
+  return colorOrder
+    .map((color) => ({ label: color, count: counts[color] }))
+    .filter((bucket) => bucket.count > 0);
+};
+
+const countSpinOutcomes = (spinResults: SpinResult[]): CountBucket[] => {
+  const counts = spinResults.reduce<Record<string, number>>((accumulator, result) => {
+    const label =
+      result.rawLandedSlice === 'bonus'
+        ? 'bonus'
+        : result.wasNearMiss
+          ? 'near miss'
+          : `${result.awardedTier}`;
+
+    accumulator[label] = (accumulator[label] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count);
+};
 
 export const buildStatsSummary = ({
   habits,
@@ -184,5 +327,129 @@ export const buildStatsSummary = ({
     honestyStreak: integrityRuntime.honestyStreak,
     honestAdmissionCount: integrityRuntime.honestAdmissionCount,
     nextAction,
+  };
+};
+
+export const buildProgressDashboard = ({
+  habits,
+  jars,
+  rewards,
+  completions,
+  tokens,
+  spinResults,
+  rewardGrants,
+  activeRewardSession,
+  integrityCheckIns,
+  integrityRuntime,
+  filters,
+}: BuildProgressDashboardInput): ProgressDashboard => {
+  const todayKey = filters.todayKey ?? toLocalDateKey();
+  const habit = filters.habitId
+    ? habits.find((candidate) => candidate.id === filters.habitId)
+    : undefined;
+  const jar = filters.jarId ? jars.find((candidate) => candidate.id === filters.jarId) : undefined;
+  const activeJarIds = new Set(jars.filter((candidate) => !candidate.archivedAt).map((candidate) => candidate.id));
+  const scopedHabitIds = new Set(
+    habits
+      .filter((candidate) => !candidate.archivedAt && activeJarIds.has(candidate.jarId))
+      .filter((candidate) => !filters.habitId || candidate.id === filters.habitId)
+      .filter((candidate) => !filters.jarId || candidate.jarId === filters.jarId)
+      .map((candidate) => candidate.id),
+  );
+  const filteredCompletions = completions.filter(
+    (completion) =>
+      scopedHabitIds.has(completion.habitId) &&
+      inTimeframe(completion.completedAt, filters.timeframe, todayKey),
+  );
+  const filteredCompletionIds = new Set(filteredCompletions.map((completion) => completion.id));
+  const filteredTokens = tokens.filter(
+    (token) =>
+      (!filters.jarId || token.jarId === filters.jarId) &&
+      inTimeframe(token.earnedAt, filters.timeframe, todayKey) &&
+      (!filters.habitId ||
+        (token.sourceCompletionId ? filteredCompletionIds.has(token.sourceCompletionId) : false)),
+  );
+  const filteredSpinResults = spinResults.filter(
+    (spinResult) =>
+      filteredCompletionIds.has(spinResult.habitCompletionId) &&
+      inTimeframe(spinResult.spunAt, filters.timeframe, todayKey),
+  );
+  const filteredSpinIds = new Set(filteredSpinResults.map((spinResult) => spinResult.id));
+  const filteredRewardGrants = rewardGrants.filter(
+    (grant) =>
+      inTimeframe(grant.grantedAt, filters.timeframe, todayKey) &&
+      (!grant.spinResultId || filteredSpinIds.has(grant.spinResultId)),
+  );
+  const checkInCompletedToday = integrityCheckIns.some((checkIn) => checkIn.date === todayKey);
+  const activeFilterLabel = [
+    timeframeLabel(filters.timeframe),
+    ...(jar ? [jar.name] : []),
+    ...(habit ? [habit.name] : []),
+  ].join(' / ');
+  const momentumScore =
+    filteredCompletions.length +
+    filteredTokens.length +
+    filteredRewardGrants.length * 2 +
+    integrityRuntime.honestyStreak;
+  const coachingCards: CoachingCard[] = [];
+
+  if (filteredCompletions.length === 0) {
+    coachingCards.push({
+      title: 'Start the signal',
+      message: 'Log one rep in this view and the trend line wakes up.',
+      route: '/',
+      label: 'Log a rep',
+    });
+  } else {
+    const topHabitName = mostCompletedHabitName(habits, filteredCompletions);
+    coachingCards.push({
+      title: 'Momentum is real',
+      message: topHabitName
+        ? `${topHabitName} is carrying this slice. Consider adding a nearby cue.`
+        : 'This slice has real reps behind it. Keep the next one small.',
+      route: '/habits',
+      label: 'Tune habits',
+    });
+  }
+
+  if (tokens.filter((token) => token.state === 'in_inventory').length > 0 && !activeRewardSession) {
+    coachingCards.push({
+      title: 'Reward energy is stored',
+      message: 'Inventory tokens are waiting. Spin now or save matching colors for a bigger tier.',
+      route: '/spin',
+      label: 'Open spin',
+    });
+  }
+
+  if (!checkInCompletedToday) {
+    coachingCards.push({
+      title: 'Close the loop gently',
+      message: 'One honest check-in turns today into usable data.',
+      route: '/checkin',
+      label: 'Check in',
+    });
+  }
+
+  if (rewards.filter((reward) => !reward.archivedAt).length < 3) {
+    coachingCards.push({
+      title: 'Add reward variety',
+      message: 'A few tiered rewards makes the wheel feel less repetitive.',
+      route: '/rewards',
+      label: 'Add reward',
+    });
+  }
+
+  return {
+    activeFilterLabel,
+    filteredCompletionCount: filteredCompletions.length,
+    filteredBonusCompletionCount: filteredCompletions.filter((completion) => completion.wasBonusRep).length,
+    filteredTokenCount: filteredTokens.length,
+    filteredSpinCount: filteredSpinResults.length,
+    filteredRewardGrantCount: filteredRewardGrants.length,
+    momentumScore,
+    completionTrend: buildTrend(filteredCompletions, todayKey, filters.timeframe === '30d' ? 10 : 7),
+    tokenColorCounts: countByTokenColor(filteredTokens),
+    spinOutcomeCounts: countSpinOutcomes(filteredSpinResults),
+    coachingCards: coachingCards.slice(0, 3),
   };
 };

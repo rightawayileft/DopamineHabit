@@ -33,23 +33,24 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR12 first-loop expansion and guided setup: added a post-onboarding next-step route, quick-add habit/reward templates, contextual concept copy, first-spin checklist state, and focused guidance tests.
 - PR13 spin and reward comprehension: added a token-to-tier cash-in explainer, direct disabled-spin reasons, detailed post-spin outcome explanations, active reward recovery context, and focused comprehension tests.
 - PR14 integrity reminder and settings completion: added a persisted reminder toggle, permission-aware local notification scheduling, Settings reminder status, Home check-in prompt, and no-shame integrity recovery copy.
+- PR15 stats, progress, and coaching: added timeframe, jar, and habit filters, progress dashboard helpers, momentum score, rep rhythm bars, reward-energy breakdowns, and coaching cards.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR15 should focus on stats, progress, and coaching.
+PR16 should focus on the agentic product audit harness.
 
 Recommended scope:
 
-- Replace `Stats` placeholder with completion trends, token earnings, spin outcomes, reward grants, fun money, milestones, and integrity streaks.
-- Add simple "next best action" coaching based on local state.
-- Add filters for habit, jar, and timeframe.
-- Add empty states that guide the user back into the loop.
+- Add a `docs/agentic-product-audit-prompts.md` prompt pack.
+- Add seeded journey states for first-time, returning, power, stale-state, accessibility, and recovery users.
+- Add a lightweight route-render smoke test or browser verification script for core journeys.
+- Add a backlog synthesis format with severity, evidence, user impact, effort, and acceptance criteria.
+- Run a six-agent audit before major roadmap pivots.
 
 ## Later Checkpoints
 
-- PR15 stats, progress, and coaching: replace Stats placeholder with completion, token, reward, fun money, milestone, and integrity insights.
 - PR16 agentic product audit harness: prompt pack, seeded journey states, route-render smoke tests, and six-agent backlog synthesis.
 - Native readiness: EAS build profiles, app icons/splash polish, notification permissions, and store metadata.
 

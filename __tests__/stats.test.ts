@@ -1,4 +1,4 @@
-import { buildStatsSummary, formatCents } from '@/game/stats';
+import { buildProgressDashboard, buildStatsSummary, formatCents } from '@/game/stats';
 import type { IntegrityRuntime } from '@/store/types';
 
 const integrityRuntime: IntegrityRuntime = {
@@ -170,5 +170,123 @@ describe('stats summary', () => {
 
   it('formats fun money balances', () => {
     expect(formatCents(150)).toBe('$1.50');
+  });
+
+  it('builds a filtered progress dashboard with coaching cards', () => {
+    const dashboard = buildProgressDashboard({
+      habits: [
+        {
+          id: 'habit-1',
+          jarId: 'jar-1',
+          name: 'Pushups',
+          createdAt: '2026-04-23T12:00:00Z',
+        },
+        {
+          id: 'habit-2',
+          jarId: 'jar-2',
+          name: 'Reading',
+          createdAt: '2026-04-23T12:00:00Z',
+        },
+      ],
+      jars: [
+        {
+          id: 'jar-1',
+          name: 'Fitness',
+          colorHex: '#46D56E',
+          milestones: [],
+          funMoneyEnabled: false,
+          funMoneyPerTokenCents: 50,
+          funMoneyBalanceCents: 0,
+          createdAt: '2026-04-23T12:00:00Z',
+        },
+        {
+          id: 'jar-2',
+          name: 'Mind',
+          colorHex: '#3D9BFF',
+          milestones: [],
+          funMoneyEnabled: false,
+          funMoneyPerTokenCents: 50,
+          funMoneyBalanceCents: 0,
+          createdAt: '2026-04-23T12:00:00Z',
+        },
+      ],
+      rewards: [
+        {
+          id: 'reward-1',
+          name: 'Phone game',
+          tier: 1,
+          durationMinutes: 3,
+        },
+      ],
+      completions: [
+        {
+          id: 'completion-1',
+          habitId: 'habit-1',
+          completedAt: '2026-04-27T12:05:00Z',
+          tokenDrawnId: 'token-1',
+          wasBonusRep: false,
+        },
+        {
+          id: 'completion-2',
+          habitId: 'habit-2',
+          completedAt: '2026-03-01T12:05:00Z',
+          tokenDrawnId: 'token-2',
+          wasBonusRep: false,
+        },
+      ],
+      tokens: [
+        {
+          id: 'token-1',
+          color: 'blue',
+          earnedAt: '2026-04-27T12:05:00Z',
+          state: 'in_inventory',
+          sourceCompletionId: 'completion-1',
+          jarId: 'jar-1',
+        },
+        {
+          id: 'token-2',
+          color: 'green',
+          earnedAt: '2026-03-01T12:05:00Z',
+          state: 'in_inventory',
+          sourceCompletionId: 'completion-2',
+          jarId: 'jar-2',
+        },
+      ],
+      spinResults: [
+        {
+          id: 'spin-1',
+          spunAt: '2026-04-27T12:07:00Z',
+          habitCompletionId: 'completion-1',
+          cashedInTokenIds: [],
+          activatedMaxTier: 1,
+          rawLandedSlice: 'tier1',
+          awardedTier: 1,
+          awardedRewardId: 'reward-1',
+          wasNearMiss: false,
+          seed: 'seed-1',
+        },
+      ],
+      rewardGrants: [],
+      activeRewardSession: undefined,
+      integrityCheckIns: [],
+      integrityRuntime,
+      filters: {
+        timeframe: '7d',
+        jarId: 'jar-1',
+        habitId: 'habit-1',
+        todayKey: '2026-04-27',
+      },
+    });
+
+    expect(dashboard).toMatchObject({
+      activeFilterLabel: 'last 7 days / Fitness / Pushups',
+      filteredCompletionCount: 1,
+      filteredTokenCount: 1,
+      filteredSpinCount: 1,
+    });
+    expect(dashboard.tokenColorCounts).toEqual([{ label: 'blue', count: 1 }]);
+    expect(dashboard.coachingCards).toEqual(
+      expect.arrayContaining([expect.objectContaining({ title: 'Momentum is real' })]),
+    );
   });
 });
