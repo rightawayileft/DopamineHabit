@@ -41,7 +41,12 @@ It runs:
 4. In Expo dashboard, ensure `.eas/workflows/deploy.yml` is enabled for GitHub-triggered deploys on `main`.
 5. Confirm production alias deployment:
    ```bash
-   npx eas-cli@latest deploy:list --limit 5
+   npx eas-cli@latest workflow:runs
+   ```
+   If the workflow is not available or needs to be bypassed, deploy the verified
+   static export directly:
+   ```bash
+   npx eas-cli@latest deploy --prod --alias dopaminehabit
    ```
 
 ### Alias order
