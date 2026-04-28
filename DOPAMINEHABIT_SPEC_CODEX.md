@@ -59,6 +59,8 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Three matching non-gold tokens activate Tier 3.
 - Invalid selections must explain why they are invalid.
 - First-spin setup must explain the current state: no rep ready, pending spin recovery, invalid token selection, active reward blocker, or ready to spin.
+- Disabled spin controls must show the direct reason, not only appear inactive.
+- Spin outcomes must explain the landed slice, activated tier, cashed-in tokens, near-miss or fallback behavior, and reward duration when available.
 - Preparing a spin must reject archived habits, duplicate pending spins, already-spun completions, active reward sessions, and tokens outside the completion habit jar.
 - Pending spins must be recoverable after reload.
 - Reduced motion must skip the long wheel animation and resolve the persisted spin directly.
@@ -70,6 +72,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Reward grants are append-only.
 - Active reward sessions block new spins until ended, completed, or expired.
 - Reward history should explain what was earned, when, and why.
+- Active reward screens should help users protect the granted session, mark it complete, or end it early.
 
 ### Bonus Rounds
 

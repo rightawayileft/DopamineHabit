@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { buildActiveRewardSessionDetails } from '@/game/spinComprehension';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
 
@@ -21,6 +22,7 @@ export default function RewardActiveScreen() {
   const rewards = useAppStore((state) => state.rewards);
   const rewardGrants = useAppStore((state) => state.rewardGrants);
   const activeRewardSession = useAppStore((state) => state.activeRewardSession);
+  const endActiveRewardSession = useAppStore((state) => state.endActiveRewardSession);
   const endRewardSessionEarly = useAppStore((state) => state.endRewardSessionEarly);
   const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   const remainingMs = useTimer(activeRewardSession?.expiresAt);
@@ -60,6 +62,12 @@ export default function RewardActiveScreen() {
     );
   }
 
+  const sessionDetails = buildActiveRewardSessionDetails({
+    reward: activeReward,
+    grant: activeGrant,
+    expiresAt: activeRewardSession.expiresAt,
+  });
+
   return (
     <Screen>
       <Card>
@@ -67,7 +75,16 @@ export default function RewardActiveScreen() {
         <Text muted>Time remaining: {renderCountdown(remainingMs)}</Text>
         <Text muted>Expires at: {activeRewardSession.expiresAt}</Text>
       </Card>
-      <Button label="End reward early" tone="secondary" onPress={() => endRewardSessionEarly()} />
+      <Card>
+        <Text variant="title">{sessionDetails.title}</Text>
+        {sessionDetails.lines.map((line) => (
+          <Text key={line} muted>
+            {line}
+          </Text>
+        ))}
+        <Button label="Mark reward complete" onPress={() => endActiveRewardSession()} />
+        <Button label="End reward early" tone="secondary" onPress={() => endRewardSessionEarly()} />
+      </Card>
     </Screen>
   );
 }

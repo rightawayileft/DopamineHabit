@@ -34,6 +34,10 @@ export function CashInPanel({
       <Text muted>
         {selectedTokens.length} selected, Tier {activatedMaxTier} active
       </Text>
+      <Text muted>
+        Cash-in guide: 0 selected = Tier 1, 2 matching non-gold = Tier 2, 3 matching
+        non-gold or 1 gold = Tier 3.
+      </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {inventoryTokens.map((token) => {
           const selected = selectedIds.has(token.id);

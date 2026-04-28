@@ -16,6 +16,11 @@ import {
   buildFirstSpinChecklist,
   type FirstSpinChecklistStatus,
 } from '@/game/firstLoopGuidance';
+import {
+  buildSpinDisabledReason,
+  buildSpinOutcomeDetails,
+  type SpinOutcomeDetails,
+} from '@/game/spinComprehension';
 import { playHapticPattern } from '@/haptics/patterns';
 import { useAppStore } from '@/store';
 import { colors } from '@/theme/colors';
@@ -53,7 +58,9 @@ export default function SpinScreen() {
   const resolvePreparedSpin = useAppStore((state) => state.resolvePreparedSpin);
   const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([]);
   const [lastLockedSlice, setLastLockedSlice] = useState<WheelSliceKind | undefined>(undefined);
-  const [spinMessage, setSpinMessage] = useState<string | undefined>(undefined);
+  const [lastOutcomeDetails, setLastOutcomeDetails] = useState<SpinOutcomeDetails | undefined>(
+    undefined,
+  );
   const { animatedWheelStyle, isAnimating, startSpin } = useSpinAnimation();
 
   const spunCompletionIds = new Set(spinResults.map((spinResult) => spinResult.habitCompletionId));
@@ -90,6 +97,14 @@ export default function SpinScreen() {
     inventoryTokenCount: inventoryTokens.length,
     activatedMaxTier: cashIn.activatedMaxTier,
   });
+  const spinDisabledReason = buildSpinDisabledReason({
+    hasRepReady: Boolean(latestCompletion),
+    hasPendingSpin: Boolean(pendingSpin),
+    hasActiveReward: Boolean(activeRewardSession),
+    isAnimating,
+    isCashInValid: cashIn.isValid,
+    ...(cashIn.reason === undefined ? {} : { cashInReason: cashIn.reason }),
+  });
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -115,14 +130,12 @@ export default function SpinScreen() {
       ? rewards.find((reward) => reward.id === result.awardedRewardId)
       : undefined;
     setLastLockedSlice(lockedSlice === 'tier2' || lockedSlice === 'tier3' ? lockedSlice : undefined);
-    setSpinMessage(
-      result.rawLandedSlice === 'bonus'
-        ? 'Bonus round unlocked.'
-        : result.wasNearMiss
-        ? `Near miss: landed on locked ${result.rawLandedSlice}, awarded Tier 1.`
-        : awardedReward
-          ? `Awarded ${result.awardedTier}: ${awardedReward.name}.`
-          : `Awarded ${result.awardedTier}.`,
+    setLastOutcomeDetails(
+      buildSpinOutcomeDetails({
+        result,
+        ...(awardedReward === undefined ? {} : { awardedReward }),
+        cashedInTokenCount: result.cashedInTokenIds.length,
+      }),
     );
     soundManager.setEnabled(soundEnabled);
     void soundManager.play(result.wasNearMiss ? 'nearMiss' : 'spinSettle');
@@ -144,7 +157,7 @@ export default function SpinScreen() {
       return;
     }
 
-    setSpinMessage(undefined);
+    setLastOutcomeDetails(undefined);
     setLastLockedSlice(undefined);
     setSelectedTokenIds([]);
     soundManager.setEnabled(soundEnabled);
@@ -230,12 +243,16 @@ export default function SpinScreen() {
         lockedSlice={lastLockedSlice}
         animatedStyle={animatedWheelStyle}
       />
-      {spinMessage ? (
+      {lastOutcomeDetails ? (
         <Card>
           <Text variant="title" style={{ color: lastLockedSlice ? colors.warning : colors.success }}>
-            Result
+            {lastOutcomeDetails.title}
           </Text>
-          <Text muted>{spinMessage}</Text>
+          {lastOutcomeDetails.lines.map((line) => (
+            <Text key={line} muted>
+              {line}
+            </Text>
+          ))}
         </Card>
       ) : null}
       {activeBonusChainId ? (
@@ -253,6 +270,12 @@ export default function SpinScreen() {
           }
         />
       ) : null}
+      {spinDisabledReason ? (
+        <Card>
+          <Text variant="title">Spin not ready</Text>
+          <Text muted>{spinDisabledReason}</Text>
+        </Card>
+      ) : null}
       <Button
         disabled={
           !latestCompletion ||
@@ -261,7 +284,7 @@ export default function SpinScreen() {
           Boolean(pendingSpin) ||
           Boolean(activeRewardSession)
         }
-        label={isAnimating || pendingSpin ? 'Spinning' : 'Spin'}
+        label={isAnimating ? 'Spinning' : pendingSpin ? 'Finish saved spin first' : 'Spin'}
         onPress={spin}
       />
     </Screen>

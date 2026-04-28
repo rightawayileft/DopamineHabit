@@ -31,24 +31,23 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR10 product legibility and navigation: restored the missing product spec, added persistent primary navigation plus a Manage hub, replaced placeholder Settings and Stats routes, surfaced add-more habit/reward/jar affordances from Home/onboarding, added build/local-data visibility, and added stats summary tests.
 - PR11 local DB durability and data controls: added persisted-state versioning, migration helpers, old-envelope migration tests, Settings export/import/reset controls, stale-state recovery copy, and `docs/PERSISTENCE.md`.
 - PR12 first-loop expansion and guided setup: added a post-onboarding next-step route, quick-add habit/reward templates, contextual concept copy, first-spin checklist state, and focused guidance tests.
+- PR13 spin and reward comprehension: added a token-to-tier cash-in explainer, direct disabled-spin reasons, detailed post-spin outcome explanations, active reward recovery context, and focused comprehension tests.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR13 should focus on spin and reward comprehension.
+PR14 should focus on integrity reminder and settings completion.
 
 Recommended scope:
 
-- Add a token-to-tier explainer in `CashInPanel`.
-- Show disabled spin reasons as direct copy.
-- Add "why this reward" details after spin: landed slice, activated tier, near miss, fallback, selected tokens, and reward duration.
-- Improve active reward screen with "protect this session" guidance, completion affordance, and reward history context.
-- Add tests for disabled reason states and active reward recovery.
+- Implement `useCheckInReminder` for supported platforms with permission-aware behavior.
+- Add Settings controls for check-in time, haptics, sound, reduced motion, and notification status.
+- Add no-shame copy for missed or partial check-ins.
+- Add reminder scheduling tests where practical, plus platform fallback tests.
 
 ## Later Checkpoints
 
-- PR13 spin and reward comprehension: token-to-tier explainer, disabled spin reasons, "why this reward" summaries, and active reward recovery.
 - PR14 integrity reminder and settings completion: real check-in reminders, Settings controls, no-shame recovery copy, and platform fallback tests.
 - PR15 stats, progress, and coaching: replace Stats placeholder with completion, token, reward, fun money, milestone, and integrity insights.
 - PR16 agentic product audit harness: prompt pack, seeded journey states, route-render smoke tests, and six-agent backlog synthesis.
