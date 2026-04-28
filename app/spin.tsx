@@ -179,10 +179,10 @@ export default function SpinScreen() {
       <Card>
         <Text variant="display">Spin</Text>
         <Text muted>
-          Cash in matching tokens before spinning. Locked Tier 2 or Tier 3 landings visibly fall
-          through to Tier 1.
+          Spin with no selected tokens for the first reward. Save non-gold tokens until they make
+          a matching set.
         </Text>
-        <Text muted>Leave tokens unselected for a Tier 1 spin.</Text>
+        <Text muted>Locked Tier 2 or Tier 3 landings visibly fall through to Tier 1.</Text>
       </Card>
       <Card>
         <Text variant="title">{firstSpinChecklist.title}</Text>
@@ -253,6 +253,17 @@ export default function SpinScreen() {
               {line}
             </Text>
           ))}
+          {activeRewardSession && activeReward ? (
+            <Button
+              label={`Start reward: ${activeReward.name}`}
+              onPress={() =>
+                router.push({
+                  pathname: '/reward/[id]',
+                  params: { id: activeReward.id },
+                })
+              }
+            />
+          ) : null}
         </Card>
       ) : null}
       {activeBonusChainId ? (
@@ -284,7 +295,15 @@ export default function SpinScreen() {
           Boolean(pendingSpin) ||
           Boolean(activeRewardSession)
         }
-        label={isAnimating ? 'Spinning' : pendingSpin ? 'Finish saved spin first' : 'Spin'}
+        label={
+          isAnimating
+            ? 'Spinning'
+            : pendingSpin
+              ? 'Finish saved spin first'
+              : !cashIn.isValid
+                ? 'Fix token selection'
+                : 'Spin'
+        }
         onPress={spin}
       />
     </Screen>

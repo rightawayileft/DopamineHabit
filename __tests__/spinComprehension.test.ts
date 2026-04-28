@@ -137,8 +137,9 @@ describe('spin comprehension', () => {
     expect(details).toMatchObject({
       title: 'Active reward: Chess puzzle',
       lines: expect.arrayContaining([
-        'Granted from spin at 2026-04-27T13:00:00Z.',
+        'Granted from spin.',
         'Session length: 10 min.',
+        'Closes around 2026-04-27T13:10:00Z.',
         'Protect this session: use only the granted reward, then mark it complete.',
       ]),
     });

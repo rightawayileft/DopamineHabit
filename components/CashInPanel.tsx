@@ -27,6 +27,8 @@ export function CashInPanel({
   onClear,
 }: CashInPanelProps) {
   const selectedIds = new Set(selectedTokens.map((token) => token.id));
+  const selectedSingleNonGold =
+    selectedTokens.length === 1 && selectedTokens[0]?.color !== 'gold';
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -61,7 +63,18 @@ export function CashInPanel({
       </View>
       {inventoryTokens.length === 0 ? <Text muted>Complete a rep to earn tokens first.</Text> : null}
       {!isValid && reason ? <Text style={{ color: colors.danger }}>{reason}</Text> : null}
-      {selectedTokens.length > 0 ? <Button label="Clear selection" onPress={onClear} tone="secondary" /> : null}
+      {selectedSingleNonGold && !isValid ? (
+        <Text muted>
+          Save that token for a matching set later, or clear it and spin Tier 1 now.
+        </Text>
+      ) : null}
+      {selectedTokens.length > 0 ? (
+        <Button
+          label={selectedSingleNonGold && !isValid ? 'Clear for Tier 1 spin' : 'Clear selection'}
+          onPress={onClear}
+          tone="secondary"
+        />
+      ) : null}
     </View>
   );
 }

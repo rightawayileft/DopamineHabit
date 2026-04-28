@@ -22,6 +22,8 @@ export default function HomeScreen() {
   const completions = useAppStore((state) => state.completions);
   const integrityCheckIns = useAppStore((state) => state.integrityCheckIns);
   const tokens = useAppStore((state) => state.tokens);
+  const spinResults = useAppStore((state) => state.spinResults);
+  const rewardGrants = useAppStore((state) => state.rewardGrants);
   const lastCompletionFeedback = useAppStore((state) => state.lastCompletionFeedback);
   const integrityCheckInTime = useAppStore((state) => state.settings.integrityCheckInTime);
   const checkInReminderEnabled = useAppStore(
@@ -50,6 +52,12 @@ export default function HomeScreen() {
   const firstReward = activeRewards[0];
   const inventoryTokens = tokens.filter((token) => token.state === 'in_inventory');
   const todayCheckIn = findCheckInForDate(integrityCheckIns, toLocalDateKey());
+  const spunCompletionIds = new Set(spinResults.map((spinResult) => spinResult.habitCompletionId));
+  const feedbackCanSpin =
+    lastCompletionFeedback?.status === 'completed' &&
+    lastCompletionFeedback.completionId !== undefined &&
+    !spunCompletionIds.has(lastCompletionFeedback.completionId);
+  const hasRewardLoopStarted = rewardGrants.length > 0;
 
   const completeHabit = (habitId: string) => {
     const completion = logHabitCompletion({ habitId });
@@ -69,10 +77,7 @@ export default function HomeScreen() {
     <Screen>
       <Card>
         <Text variant="title">DopamineHabit</Text>
-        <Text muted>
-          Complete a habit rep to draw a token. Add more habits and rewards any time from
-          Manage.
-        </Text>
+        <Text muted>Do one rep, draw one token, then spin for the first reward.</Text>
       </Card>
       {lastCompletionFeedback ? (
         <Card>
@@ -80,6 +85,12 @@ export default function HomeScreen() {
             {lastCompletionFeedback.status === 'completed' ? 'Token drawn' : 'Not yet'}
           </Text>
           <Text muted>{lastCompletionFeedback.message}</Text>
+          {feedbackCanSpin ? (
+            <>
+              <Text muted>Nice. That token is saved, and Tier 1 spins need no cash-in.</Text>
+              <Button label="Spin now" onPress={() => router.push('/spin')} />
+            </>
+          ) : null}
         </Card>
       ) : null}
       <Card>
@@ -90,10 +101,13 @@ export default function HomeScreen() {
             Tier 1 reward: {firstReward?.name ?? 'No active reward'}
             {firstReward?.durationMinutes ? `, ${firstReward.durationMinutes} min` : ''}
           </Text>
-          <Text muted>Integrity check-in: {integrityCheckInTime}</Text>
+          <Text muted>
+            Integrity check-in:{' '}
+            {hasRewardLoopStarted ? integrityCheckInTime : `after your first reward loop`}
+          </Text>
         </View>
       </Card>
-      {!todayCheckIn ? (
+      {hasRewardLoopStarted && !todayCheckIn ? (
         <Card>
           <Text variant="title">Integrity check-in is open</Text>
           <Text muted>
@@ -107,22 +121,6 @@ export default function HomeScreen() {
           />
         </Card>
       ) : null}
-      <Card>
-        <Text variant="title">Grow the loop</Text>
-        <Text muted>
-          Your first loop is only a starting point. Add more habit cues, reward choices, and jars
-          as your routines expand.
-        </Text>
-        <Button label="Manage all options" onPress={() => router.push('/manage')} />
-        <Button label="Add habit" tone="secondary" onPress={() => router.push('/habits')} />
-        <Button label="Add reward" tone="secondary" onPress={() => router.push('/rewards')} />
-        <Button label="Add jar" tone="secondary" onPress={() => router.push('/jars')} />
-        <Button
-          label="Integrity check-in"
-          tone="secondary"
-          onPress={() => router.push('/checkin')}
-        />
-      </Card>
       <View style={{ gap: spacing.md }}>
         {activeHabits.length === 0 ? (
           <Card>
@@ -151,6 +149,24 @@ export default function HomeScreen() {
         <Text variant="title">Inventory</Text>
         <TokenInventory tokens={inventoryTokens} />
         {firstHabit ? <Button label="Open spin setup" onPress={() => router.push('/spin')} /> : null}
+      </Card>
+      <Card>
+        <Text variant="title">Grow the loop</Text>
+        <Text muted>
+          Your first loop is only a starting point. Add more habit cues, reward choices, and jars
+          as your routines expand.
+        </Text>
+        <Button label="Manage all options" onPress={() => router.push('/manage')} />
+        <Button label="Add habit" tone="secondary" onPress={() => router.push('/habits')} />
+        <Button label="Add reward" tone="secondary" onPress={() => router.push('/rewards')} />
+        <Button label="Add jar" tone="secondary" onPress={() => router.push('/jars')} />
+        {hasRewardLoopStarted ? (
+          <Button
+            label="Integrity check-in"
+            tone="secondary"
+            onPress={() => router.push('/checkin')}
+          />
+        ) : null}
       </Card>
     </Screen>
   );

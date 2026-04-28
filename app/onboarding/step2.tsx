@@ -52,10 +52,10 @@ export default function OnboardingStepTwoScreen() {
   return (
     <Screen>
       <Card>
-        <Text variant="display">Build the first loop.</Text>
+        <Text variant="display">Choose the first rep.</Text>
         <Text muted>
-          Start with one jar, one habit, and one Tier 1 reward. You can add more habits,
-          reward options, and jars after setup.
+          Pick one small action and one short reward. After the first spin, Manage has room for
+          more habits, rewards, and jars.
         </Text>
       </Card>
       <Card>
@@ -88,7 +88,7 @@ export default function OnboardingStepTwoScreen() {
         />
       </Card>
       <Card>
-        <FieldLabel>Tier 1 Reward</FieldLabel>
+        <FieldLabel>First reward</FieldLabel>
         <Input
           value={rewardName}
           onChangeText={setRewardName}
@@ -101,8 +101,7 @@ export default function OnboardingStepTwoScreen() {
           placeholder="3"
         />
         <Text muted>
-          This reward becomes your first spin outcome. Higher-tier rewards can be added from
-          Manage later.
+          This is the reward the first spin can grant. Bigger and rarer rewards can wait.
         </Text>
         <Button disabled={!canContinue} label="Continue" onPress={continueToTimer} />
       </Card>

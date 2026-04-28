@@ -8,12 +8,8 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { quickHabitTemplates, quickRewardTemplates } from '@/game/firstLoopGuidance';
 import { useAppStore } from '@/store';
-import type { Reward } from '@/store/types';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-
-const formatTier = (tier: Reward['tier']): string =>
-  tier === 'jackpot' ? 'Jackpot' : `Tier ${tier}`;
 
 export default function OnboardingNextScreen() {
   const nakedRuleAcceptedAt = useAppStore((state) => state.settings.nakedRuleAcceptedAt);
@@ -40,9 +36,7 @@ export default function OnboardingNextScreen() {
     <Screen>
       <Card>
         <Text variant="display">Your first loop is ready.</Text>
-        <Text muted>
-          Start the first rep now, or add another habit or reward while setup is still fresh.
-        </Text>
+        <Text muted>Do the rep, draw a token, then spin for the reward.</Text>
         {message ? <Text style={{ color: colors.success }}>{message}</Text> : null}
         <Button label="Start first rep" onPress={() => router.replace('/')} />
         <Button label="Add another habit" tone="secondary" onPress={() => router.push('/habits')} />
@@ -57,8 +51,7 @@ export default function OnboardingNextScreen() {
       <Card>
         <Text variant="title">Quick add</Text>
         <Text muted>
-          Optional templates give the wheel more variety. They are normal options you can edit
-          or archive later.
+          Optional extras can wait. Add one only if it makes the first day easier.
         </Text>
         <View style={{ gap: spacing.sm }}>
           {quickHabitTemplates.slice(0, 2).map((template) => {
@@ -98,7 +91,7 @@ export default function OnboardingNextScreen() {
                 label={
                   alreadyAdded
                     ? `Added reward: ${template.name}`
-                    : `Add ${formatTier(template.tier)} reward: ${template.name}`
+                    : `Add reward: ${template.name}`
                 }
                 tone="secondary"
                 onPress={() => {
@@ -120,14 +113,10 @@ export default function OnboardingNextScreen() {
       </Card>
 
       <Card>
-        <Text variant="title">What each piece does</Text>
-        <Text muted>Jar: the bucket where tokens from related habits collect.</Text>
-        <Text muted>Habit: the small rep that earns a token.</Text>
-        <Text muted>Reward: the timed session a spin can grant.</Text>
-        <Text muted>Token: the earned piece you can save or cash in for better tiers.</Text>
-        <Text muted>Spin: the wheel result that turns a rep into a reward or bonus.</Text>
-        <Text muted>Bonus: a follow-up challenge that can extend the chain.</Text>
-        <Text muted>Integrity: the daily no-shame check-in that keeps the gate honest.</Text>
+        <Text variant="title">Keep it simple</Text>
+        <Text muted>One rep earns one token.</Text>
+        <Text muted>A spin turns that rep into a short reward session.</Text>
+        <Text muted>Everything else can wait until the first loop feels real.</Text>
       </Card>
     </Screen>
   );

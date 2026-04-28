@@ -146,11 +146,11 @@ export const buildActiveRewardSessionDetails = ({
 }: ActiveRewardSessionDetailsInput): ActiveRewardSessionDetails => ({
   title: `Active reward: ${reward.name}`,
   lines: [
-    `Granted from ${grant.source} at ${grant.grantedAt}.`,
+    `Granted from ${grant.source}.`,
     grant.durationMinutes
       ? `Session length: ${grant.durationMinutes} min.`
       : 'Session length follows the reward configuration.',
-    `Expires at ${expiresAt}.`,
+    `Closes around ${expiresAt}.`,
     'Protect this session: use only the granted reward, then mark it complete.',
     'End early if you stop before the timer is done.',
   ],

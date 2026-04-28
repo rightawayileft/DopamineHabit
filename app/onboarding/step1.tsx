@@ -22,10 +22,10 @@ export default function OnboardingStepOneScreen() {
   return (
     <Screen centered>
       <Card>
-        <Text variant="display">Make the app the gate.</Text>
+        <Text variant="display">Put one reward behind one tiny rep.</Text>
         <Text>
-          I commit to using my chosen reward only during app-granted sessions. If I slip, I will
-          answer the daily check-in honestly.
+          I will let DopamineHabit decide when the reward starts. If I slip, I will come back and
+          reset honestly.
         </Text>
         <Pressable
           accessibilityRole="checkbox"
@@ -55,7 +55,7 @@ export default function OnboardingStepOneScreen() {
           >
             <Text style={{ color: colors.background }}>{accepted ? 'X' : ''}</Text>
           </View>
-          <Text>I understand and commit.</Text>
+          <Text>I am ready to try one loop.</Text>
         </Pressable>
         <Button disabled={!accepted} label="Continue" onPress={continueToSetup} />
       </Card>

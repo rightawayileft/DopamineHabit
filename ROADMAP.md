@@ -36,24 +36,24 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR15 stats, progress, and coaching: added timeframe, jar, and habit filters, progress dashboard helpers, momentum score, rep rhythm bars, reward-energy breakdowns, and coaching cards.
 - PR16 agentic product audit harness: added `docs/agentic-product-audit-prompts.md`, six product-agent definitions, seven seeded journey states, route smoke checks, backlog synthesis fields, and harness tests.
 - Six-agent product audit: completed all six UX/product audit personas and synthesized prioritized findings in `docs/six-agent-product-audit-2026-04-28.md`.
+- PR17 first reward path delight: simplified first-run copy around one tiny rep, moved Home expansion controls below the rep action, added token-feedback-to-spin handoff, demoted integrity prompts until after a reward loop, clarified invalid one-token cash-ins, and added reward start/complete next actions.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR17 should focus on first reward path delight.
+PR18 should focus on recovery language and reward boundary support.
 
 Recommended scope:
 
-- Simplify first-run and post-onboarding copy so the first action is one tiny rep.
-- Demote the early integrity check-in until after the first reward loop.
-- Add a `Spin now` CTA to the first token feedback moment.
-- Fix the one-token non-gold cash-in dead end with inline recovery or saved-for-later treatment.
-- Make the first reward grant and reward completion feel satisfying, with clear next actions.
+- Add no-shame missed-day repair language where integrity and streak messaging could feel punitive.
+- Add active reward stopped/slipped states so ending early can distinguish clean stops from boundary breaks.
+- Make reward and integrity times consistently human-readable.
+- Clarify what to do when a user uses the reward outside an app-granted session.
+- Keep the next action obvious after recovery events.
 
 ## Later Checkpoints
 
-- PR17 first reward path delight: simplify first-run copy, demote early check-in, add `Spin now` from token feedback, fix one-token cash-in recovery, and make first reward start/complete feel satisfying.
 - PR18 recovery language and reward boundary support: no-shame copy pass, missed-day repair workflow, active reward stopped/slipped states, human-readable times.
 - PR19 trust and safety polish: Data Status card, safer backup/restore, gate-strength explanation, reduced-motion result focus, and undo/confirm for high-impact actions.
 - PR20 trust ledgers: token history split from inventory, reward grant why history, recent reward status on Stats.
