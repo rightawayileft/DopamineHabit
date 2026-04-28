@@ -126,3 +126,5 @@ Product audits should inspect journeys, not only code. Each finding should cite 
 - Source document
 
 Findings should include severity, user impact, opportunity, and acceptance criteria.
+
+The canonical prompt pack and seed state manifest live in `docs/agentic-product-audit-prompts.md` and `game/productAuditHarness.ts`.
