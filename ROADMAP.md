@@ -35,22 +35,29 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR14 integrity reminder and settings completion: added a persisted reminder toggle, permission-aware local notification scheduling, Settings reminder status, Home check-in prompt, and no-shame integrity recovery copy.
 - PR15 stats, progress, and coaching: added timeframe, jar, and habit filters, progress dashboard helpers, momentum score, rep rhythm bars, reward-energy breakdowns, and coaching cards.
 - PR16 agentic product audit harness: added `docs/agentic-product-audit-prompts.md`, six product-agent definitions, seven seeded journey states, route smoke checks, backlog synthesis fields, and harness tests.
+- Six-agent product audit: completed all six UX/product audit personas and synthesized prioritized findings in `docs/six-agent-product-audit-2026-04-28.md`.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-The planned PR10-PR16 product-quality roadmap is complete locally.
+PR17 should focus on first reward path delight.
 
 Recommended scope:
 
-- Push the local commits when ready.
-- Run the six-agent product audit from `docs/agentic-product-audit-prompts.md`.
-- Synthesize the agent findings into the backlog format before choosing the next roadmap.
+- Simplify first-run and post-onboarding copy so the first action is one tiny rep.
+- Demote the early integrity check-in until after the first reward loop.
+- Add a `Spin now` CTA to the first token feedback moment.
+- Fix the one-token non-gold cash-in dead end with inline recovery or saved-for-later treatment.
+- Make the first reward grant and reward completion feel satisfying, with clear next actions.
 
 ## Later Checkpoints
 
-- PR16 agentic product audit harness: prompt pack, seeded journey states, route-render smoke tests, and six-agent backlog synthesis.
+- PR17 first reward path delight: simplify first-run copy, demote early check-in, add `Spin now` from token feedback, fix one-token cash-in recovery, and make first reward start/complete feel satisfying.
+- PR18 recovery language and reward boundary support: no-shame copy pass, missed-day repair workflow, active reward stopped/slipped states, human-readable times.
+- PR19 trust and safety polish: Data Status card, safer backup/restore, gate-strength explanation, reduced-motion result focus, and undo/confirm for high-impact actions.
+- PR20 trust ledgers: token history split from inventory, reward grant why history, recent reward status on Stats.
+- PR21 mature management polish: compact/searchable management, scoped Stats filters, milestone/fun-money ledgers, consistent selected controls.
 - Native readiness: EAS build profiles, app icons/splash polish, notification permissions, and store metadata.
 
 ## Cloud Handoff Notes
