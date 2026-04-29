@@ -1,4 +1,5 @@
 import { Redirect, router } from 'expo-router';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { soundManager } from '@/audio/SoundManager';
@@ -12,6 +13,7 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { findCheckInForDate } from '@/game/integrity';
 import { playHapticPattern } from '@/haptics/patterns';
+import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
 import { spacing } from '@/theme/spacing';
 import { toLocalDateKey } from '@/utils/date';
@@ -26,6 +28,7 @@ export default function HomeScreen() {
   const tokens = useAppStore((state) => state.tokens);
   const spinResults = useAppStore((state) => state.spinResults);
   const rewardGrants = useAppStore((state) => state.rewardGrants);
+  const activeRewardSession = useAppStore((state) => state.activeRewardSession);
   const lastCompletionFeedback = useAppStore((state) => state.lastCompletionFeedback);
   const integrityCheckInTime = useAppStore((state) => state.settings.integrityCheckInTime);
   const checkInReminderEnabled = useAppStore(
@@ -34,6 +37,12 @@ export default function HomeScreen() {
   const hapticsEnabled = useAppStore((state) => state.settings.hapticsEnabled);
   const soundEnabled = useAppStore((state) => state.settings.soundEnabled);
   const logHabitCompletion = useAppStore((state) => state.logHabitCompletion);
+  const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
+  const remainingRewardMs = useTimer(activeRewardSession?.expiresAt);
+
+  useEffect(() => {
+    syncRewardSessionState();
+  }, [remainingRewardMs, syncRewardSessionState]);
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;

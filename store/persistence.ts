@@ -24,6 +24,14 @@ declare const require: (moduleName: string) => unknown;
 
 const memoryStorage = new Map<string, string>();
 
+export type PersistenceBackend = 'native-mmkv' | 'web-localStorage' | 'memory';
+
+export interface PersistenceStatus {
+  backend: PersistenceBackend;
+  durable: boolean;
+  message: string;
+}
+
 const getBrowserStorage = (): BrowserLikeStorage | undefined => {
   if (typeof globalThis.localStorage === 'undefined') {
     return undefined;
@@ -32,7 +40,12 @@ const getBrowserStorage = (): BrowserLikeStorage | undefined => {
   return globalThis.localStorage;
 };
 
-const createNativeMmkvStorage = (): StateStorage | undefined => {
+interface ResolvedStorage {
+  storage: StateStorage;
+  status: PersistenceStatus;
+}
+
+const createNativeMmkvStorage = (): ResolvedStorage | undefined => {
   if (Platform.OS === 'web') {
     return undefined;
   }
@@ -42,16 +55,23 @@ const createNativeMmkvStorage = (): StateStorage | undefined => {
     const storage = new module.MMKV({ id: APP_STORE_STORAGE_KEY });
 
     return {
-      getItem: (name) => storage.getString(name) ?? null,
-      setItem: (name, value) => storage.set(name, value),
-      removeItem: (name) => storage.delete(name),
+      storage: {
+        getItem: (name) => storage.getString(name) ?? null,
+        setItem: (name, value) => storage.set(name, value),
+        removeItem: (name) => storage.delete(name),
+      },
+      status: {
+        backend: 'native-mmkv',
+        durable: true,
+        message: 'Native MMKV storage is active.',
+      },
     };
   } catch {
     return undefined;
   }
 };
 
-const createWebStorage = (): StateStorage | undefined => {
+const createWebStorage = (): ResolvedStorage | undefined => {
   const browserStorage = getBrowserStorage();
 
   if (!browserStorage) {
@@ -59,15 +79,21 @@ const createWebStorage = (): StateStorage | undefined => {
   }
 
   return {
-    getItem: (name) => browserStorage.getItem(name),
-    setItem: (name, value) => browserStorage.setItem(name, value),
-    removeItem: (name) => browserStorage.removeItem(name),
+    storage: {
+      getItem: (name) => browserStorage.getItem(name),
+      setItem: (name, value) => browserStorage.setItem(name, value),
+      removeItem: (name) => browserStorage.removeItem(name),
+    },
+    status: {
+      backend: 'web-localStorage',
+      durable: true,
+      message: 'Web localStorage is active.',
+    },
   };
 };
 
-export const appStorage: StateStorage =
-  createNativeMmkvStorage() ??
-  createWebStorage() ?? {
+const createMemoryStorage = (): ResolvedStorage => ({
+  storage: {
     getItem: (name) => memoryStorage.get(name) ?? null,
     setItem: (name, value) => {
       memoryStorage.set(name, value);
@@ -75,7 +101,18 @@ export const appStorage: StateStorage =
     removeItem: (name) => {
       memoryStorage.delete(name);
     },
-  };
+  },
+  status: {
+    backend: 'memory',
+    durable: false,
+    message: 'Memory-only storage is active. Export data before closing the app.',
+  },
+});
+
+const resolvedStorage = createNativeMmkvStorage() ?? createWebStorage() ?? createMemoryStorage();
+
+export const appStorage: StateStorage = resolvedStorage.storage;
+export const persistenceStatus: PersistenceStatus = resolvedStorage.status;
 
 export const resetPersistenceForTests = (): void => {
   memoryStorage.clear();

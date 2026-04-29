@@ -17,6 +17,7 @@ Exports and Zustand persistence use this shape:
 ```json
 {
   "version": 3,
+  "exportedAt": "2026-04-29T00:00:00Z",
   "state": {
     "currentState": "IDLE",
     "habits": [],
@@ -43,11 +44,12 @@ The full `state` object is the `AppState` subset returned by the store `partiali
 
 Settings exposes:
 
-- Export local data: generates a JSON envelope for the current device state.
-- Import local data: accepts either a full envelope or a raw state object and migrates it before replacing current local state.
+- Data status: shows the active storage backend, whether it is durable, local record counts, app version, data version, EAS project, and storage key.
+- Export local data: generates a JSON envelope for the current device state with an `exportedAt` timestamp.
+- Import local data: previews a DopamineHabit export envelope and requires explicit confirmation before replacing current local state.
 - Reset local data: requires a second confirmation press and returns the app to onboarding.
 
-Destructive local data actions must stay user-confirmed at action time.
+User-facing import does not accept arbitrary raw JSON objects. Destructive local data and archive actions must stay user-confirmed at action time.
 
 ## Test Coverage
 

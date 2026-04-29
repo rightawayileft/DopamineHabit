@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
+import { View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -10,22 +11,36 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { buildReminderStatusCopy } from '@/game/checkInReminder';
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
-import { APP_STORE_STORAGE_KEY } from '@/store/persistence';
-import { APP_STORE_PERSIST_VERSION, useAppStore } from '@/store';
+import { APP_STORE_STORAGE_KEY, persistenceStatus } from '@/store/persistence';
+import { APP_STORE_PERSIST_VERSION, useAppStore, type ImportLocalDataPreview } from '@/store';
 import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const isValidLocalTime = (value: string): boolean => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 
 export default function SettingsScreen() {
   const settings = useAppStore((state) => state.settings);
+  const habits = useAppStore((state) => state.habits);
+  const jars = useAppStore((state) => state.jars);
+  const rewards = useAppStore((state) => state.rewards);
+  const completions = useAppStore((state) => state.completions);
+  const tokens = useAppStore((state) => state.tokens);
+  const rewardGrants = useAppStore((state) => state.rewardGrants);
+  const integrityCheckIns = useAppStore((state) => state.integrityCheckIns);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const exportLocalData = useAppStore((state) => state.exportLocalData);
+  const previewImportLocalData = useAppStore((state) => state.previewImportLocalData);
   const importLocalData = useAppStore((state) => state.importLocalData);
   const resetLocalData = useAppStore((state) => state.resetLocalData);
   const [checkInTime, setCheckInTime] = useState(settings.integrityCheckInTime);
   const [exportJson, setExportJson] = useState('');
+  const [lastExportedAt, setLastExportedAt] = useState<string | undefined>(undefined);
   const [importJson, setImportJson] = useState('');
   const [importMessage, setImportMessage] = useState<string | undefined>(undefined);
+  const [importPreview, setImportPreview] = useState<ImportLocalDataPreview | undefined>(
+    undefined,
+  );
   const [reminderMessage, setReminderMessage] = useState<string | undefined>(undefined);
   const [resetArmed, setResetArmed] = useState(false);
   const validCheckInTime = isValidLocalTime(checkInTime);
@@ -148,7 +163,26 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
-        <Text variant="title">Build and local data</Text>
+        <Text variant="title">Data status</Text>
+        <Text
+          style={{
+            color: persistenceStatus.durable ? colors.success : colors.warning,
+          }}
+        >
+          Storage: {persistenceStatus.backend}
+        </Text>
+        <Text muted>{persistenceStatus.message}</Text>
+        <Text muted>
+          Local data: {habits.length} habits, {jars.length} jars, {rewards.length} rewards,{' '}
+          {tokens.length} tokens
+        </Text>
+        <Text muted>
+          Activity: {completions.length} reps, {rewardGrants.length} reward grants,{' '}
+          {integrityCheckIns.length} check-ins
+        </Text>
+        <Text muted>
+          Last export: {lastExportedAt ? formatLocalDateTime(lastExportedAt) : 'Not this session'}
+        </Text>
         <Text muted>Version: {Constants.expoConfig?.version ?? '0.1.0'}</Text>
         <Text muted>Local DB version: {APP_STORE_PERSIST_VERSION}</Text>
         <Text muted>EAS project: {projectIdText}</Text>
@@ -157,8 +191,14 @@ export default function SettingsScreen() {
 
       <Card>
         <Text variant="title">Export local data</Text>
-        <Text muted>Creates a JSON snapshot of this device’s local DopamineHabit state.</Text>
-        <Button label="Generate export JSON" onPress={() => setExportJson(exportLocalData())} />
+        <Text muted>Creates a JSON snapshot of this device's local DopamineHabit state.</Text>
+        <Button
+          label="Generate export JSON"
+          onPress={() => {
+            setExportJson(exportLocalData());
+            setLastExportedAt(new Date().toISOString());
+          }}
+        />
         {exportJson ? (
           <Input
             accessibilityLabel="Exported local data JSON"
@@ -172,25 +212,67 @@ export default function SettingsScreen() {
       <Card>
         <Text variant="title">Import local data</Text>
         <Text muted>
-          Paste an exported JSON snapshot. Import replaces the current local state on this
+          Paste an exported JSON snapshot. Preview it first, then confirm before replacing this
           device.
         </Text>
         <Input
           accessibilityLabel="Import local data JSON"
           multiline
-          onChangeText={setImportJson}
+          onChangeText={(value) => {
+            setImportJson(value);
+            setImportPreview(undefined);
+            setImportMessage(undefined);
+          }}
           placeholder="Paste exported JSON"
           style={{ minHeight: 132, textAlignVertical: 'top' }}
           value={importJson}
         />
         <Button
           disabled={importJson.trim().length === 0}
-          label="Import pasted JSON"
+          label="Preview import"
           onPress={() => {
-            const result = importLocalData(importJson);
-            setImportMessage(result.message);
+            setImportPreview(previewImportLocalData(importJson));
+            setImportMessage(undefined);
           }}
         />
+        {importPreview?.summary ? (
+          <View style={{ gap: spacing.xs }}>
+            <Text>{importPreview.message}</Text>
+            <Text muted>
+              Exported:{' '}
+              {importPreview.summary.exportedAt
+                ? formatLocalDateTime(importPreview.summary.exportedAt)
+                : 'Unknown'}
+            </Text>
+            <Text muted>
+              Version {importPreview.summary.version}; {importPreview.summary.habits} habits,{' '}
+              {importPreview.summary.jars} jars, {importPreview.summary.rewards} rewards,{' '}
+              {importPreview.summary.tokens} tokens
+            </Text>
+            <Text muted>
+              {importPreview.summary.completions} reps, {importPreview.summary.rewardGrants}{' '}
+              reward grants, {importPreview.summary.integrityCheckIns} check-ins
+            </Text>
+            <Text muted>
+              Active reward session:{' '}
+              {importPreview.summary.hasActiveRewardSession ? 'yes' : 'no'}
+            </Text>
+            <Button
+              label="Confirm replace local data"
+              tone="secondary"
+              onPress={() => {
+                const result = importLocalData(importJson);
+                setImportMessage(result.message);
+                if (result.status === 'imported') {
+                  setImportPreview(undefined);
+                }
+              }}
+            />
+          </View>
+        ) : null}
+        {importPreview && importPreview.status === 'failed' ? (
+          <Text style={{ color: colors.danger }}>{importPreview.message}</Text>
+        ) : null}
         {importMessage ? <Text muted>{importMessage}</Text> : null}
       </Card>
 

@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { HabitForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmActionButton } from '@/components/ui/ConfirmActionButton';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { quickHabitTemplates } from '@/game/firstLoopGuidance';
@@ -104,10 +105,11 @@ export default function HabitsScreen() {
             <Text muted>Jar: {jar?.name ?? 'Unknown jar'}</Text>
             <Text muted>{completionCount} completions logged</Text>
             <Button label="Details" onPress={() => router.push(`/habit/${habit.id}`)} />
-            <Button
+            <ConfirmActionButton
               label="Archive"
-              tone="secondary"
-              onPress={() => archiveHabit(habit.id)}
+              confirmLabel="Confirm archive habit"
+              message="This pauses new reps for the habit but keeps its history."
+              onConfirm={() => archiveHabit(habit.id)}
             />
           </Card>
         );

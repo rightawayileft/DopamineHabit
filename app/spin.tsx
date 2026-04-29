@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AccessibilityInfo, View } from 'react-native';
 
 import { soundManager } from '@/audio/SoundManager';
 import { CashInPanel } from '@/components/CashInPanel';
@@ -23,6 +23,7 @@ import {
 } from '@/game/spinComprehension';
 import { playHapticPattern } from '@/haptics/patterns';
 import { useAppStore } from '@/store';
+import { useTimer } from '@/hooks/useTimer';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -56,12 +57,18 @@ export default function SpinScreen() {
   const reducedMotion = useAppStore((state) => state.settings.reducedMotion);
   const prepareSpin = useAppStore((state) => state.prepareSpin);
   const resolvePreparedSpin = useAppStore((state) => state.resolvePreparedSpin);
+  const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([]);
   const [lastLockedSlice, setLastLockedSlice] = useState<WheelSliceKind | undefined>(undefined);
   const [lastOutcomeDetails, setLastOutcomeDetails] = useState<SpinOutcomeDetails | undefined>(
     undefined,
   );
   const { animatedWheelStyle, isAnimating, startSpin } = useSpinAnimation();
+  const remainingRewardMs = useTimer(activeRewardSession?.expiresAt);
+
+  useEffect(() => {
+    syncRewardSessionState();
+  }, [remainingRewardMs, syncRewardSessionState]);
 
   const spunCompletionIds = new Set(spinResults.map((spinResult) => spinResult.habitCompletionId));
   const latestCompletion = completions
@@ -138,6 +145,13 @@ export default function SpinScreen() {
         cashedInTokenCount: result.cashedInTokenIds.length,
       }),
     );
+    if (reducedMotion) {
+      AccessibilityInfo.announceForAccessibility(
+        result.rawLandedSlice === 'bonus'
+          ? 'Bonus round unlocked.'
+          : 'Spin resolved. Reward outcome is ready.',
+      );
+    }
     soundManager.setEnabled(soundEnabled);
     void soundManager.play(result.wasNearMiss ? 'nearMiss' : 'spinSettle');
     void playHapticPattern(result.wasNearMiss ? 'nearMiss' : 'spinSettle', hapticsEnabled);
@@ -269,15 +283,18 @@ export default function SpinScreen() {
             </Text>
           ))}
           {activeRewardSession && activeReward ? (
-            <Button
-              label={`Start reward: ${activeReward.name}`}
-              onPress={() =>
-                router.push({
-                  pathname: '/reward/[id]',
-                  params: { id: activeReward.id },
-                })
-              }
-            />
+            <>
+              <Button
+                label={`Open active reward: ${activeReward.name}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/reward/[id]',
+                    params: { id: activeReward.id },
+                  })
+                }
+              />
+              <Text muted>Timer is already running.</Text>
+            </>
           ) : null}
         </Card>
       ) : null}

@@ -5,6 +5,7 @@ import { TokenInventory } from '@/components/TokenInventory';
 import { JarForm, MilestoneForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmActionButton } from '@/components/ui/ConfirmActionButton';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { buildJarProgress } from '@/game/milestones';
@@ -101,7 +102,12 @@ export default function JarDetailScreen() {
         {jar.archivedAt ? (
           <Button label="Restore jar" tone="secondary" onPress={() => restoreJar(jar.id)} />
         ) : (
-          <Button label="Archive jar" tone="secondary" onPress={() => archiveJar(jar.id)} />
+          <ConfirmActionButton
+            label="Archive jar"
+            confirmLabel="Confirm archive jar"
+            message="This pauses linked habits until the jar is restored."
+            onConfirm={() => archiveJar(jar.id)}
+          />
         )}
       </Card>
     </Screen>

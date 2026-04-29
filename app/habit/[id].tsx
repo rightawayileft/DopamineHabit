@@ -6,6 +6,7 @@ import { HabitForm } from '@/components/management/ManagementForms';
 import { TokenInventory } from '@/components/TokenInventory';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmActionButton } from '@/components/ui/ConfirmActionButton';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { playHapticPattern } from '@/haptics/patterns';
@@ -92,7 +93,12 @@ export default function HabitDetailScreen() {
         {habit.archivedAt ? (
           <Button label="Restore habit" tone="secondary" onPress={() => restoreHabit(habit.id)} />
         ) : (
-          <Button label="Archive habit" tone="secondary" onPress={() => archiveHabit(habit.id)} />
+          <ConfirmActionButton
+            label="Archive habit"
+            confirmLabel="Confirm archive habit"
+            message="This pauses new reps for the habit but keeps its completion history."
+            onConfirm={() => archiveHabit(habit.id)}
+          />
         )}
       </Card>
       <Card>

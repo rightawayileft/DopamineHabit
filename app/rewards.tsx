@@ -1,9 +1,11 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { RewardForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmActionButton } from '@/components/ui/ConfirmActionButton';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { quickRewardTemplates } from '@/game/firstLoopGuidance';
@@ -58,6 +60,20 @@ const grantStatusLabel = (grant: RewardGrant): string => {
   return 'In progress';
 };
 
+type RewardClosureMode = 'completed' | 'stopped' | 'slipped';
+
+const rewardClosurePrompt: Record<RewardClosureMode, string> = {
+  completed: 'Confirm this reward stayed inside the boundary and is complete.',
+  stopped: 'Confirm you stopped early and kept the boundary clean.',
+  slipped: 'Confirm the reward escaped the boundary so the app can help you repair it.',
+};
+
+const rewardClosureResult: Record<RewardClosureMode, string> = {
+  completed: 'Reward marked complete.',
+  stopped: 'Reward stopped clean.',
+  slipped: 'Boundary slip logged.',
+};
+
 export default function RewardsScreen() {
   const rewards = useAppStore((state) => state.rewards);
   const rewardGrants = useAppStore((state) => state.rewardGrants);
@@ -71,6 +87,10 @@ export default function RewardsScreen() {
   const recordRewardBoundarySlip = useAppStore((state) => state.recordRewardBoundarySlip);
   const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   const [editingRewardId, setEditingRewardId] = useState<string | undefined>(undefined);
+  const [pendingClosure, setPendingClosure] = useState<RewardClosureMode | undefined>(undefined);
+  const [lastClosure, setLastClosure] = useState<
+    { mode: RewardClosureMode; rewardName: string } | undefined
+  >(undefined);
   const remainingMs = useTimer(activeRewardSession?.expiresAt);
 
   useEffect(() => {
@@ -89,6 +109,23 @@ export default function RewardsScreen() {
   const activeRewards = rewards.filter((reward) => !reward.archivedAt);
   const archivedRewards = rewards.filter((reward) => reward.archivedAt);
 
+  const closeActiveReward = (mode: RewardClosureMode) => {
+    if (!activeReward) {
+      return;
+    }
+
+    if (mode === 'completed') {
+      endActiveRewardSession();
+    } else if (mode === 'stopped') {
+      endRewardSessionEarly();
+    } else {
+      recordRewardBoundarySlip();
+    }
+
+    setLastClosure({ mode, rewardName: activeReward.name });
+    setPendingClosure(undefined);
+  };
+
   return (
     <Screen>
       <Card>
@@ -100,22 +137,60 @@ export default function RewardsScreen() {
           <Text variant="title">Active now: {activeReward.name}</Text>
           <Text muted>Time left: {formatRemaining(remainingMs)}</Text>
           <Text muted>Ends around {formatLocalDateTime(activeRewardSession.expiresAt)}</Text>
-          <Button
-            label="Stop clean"
-            tone="secondary"
-            onPress={() => endRewardSessionEarly()}
-          />
-          <Button label="Mark complete now" tone="secondary" onPress={() => endActiveRewardSession()} />
-          <Button
-            label="Log boundary slip"
-            tone="secondary"
-            onPress={() => recordRewardBoundarySlip()}
-          />
+          {pendingClosure ? (
+            <View style={{ gap: spacing.sm }}>
+              <Text>{rewardClosurePrompt[pendingClosure]}</Text>
+              <Button
+                label={
+                  pendingClosure === 'completed'
+                    ? 'Confirm complete'
+                    : pendingClosure === 'stopped'
+                      ? 'Confirm stop clean'
+                      : 'Confirm boundary slip'
+                }
+                onPress={() => closeActiveReward(pendingClosure)}
+              />
+              <Button
+                label="Keep reward open"
+                tone="secondary"
+                onPress={() => setPendingClosure(undefined)}
+              />
+            </View>
+          ) : (
+            <>
+              <Button
+                label="Mark complete now"
+                tone="secondary"
+                onPress={() => setPendingClosure('completed')}
+              />
+              <Button
+                label="Stop clean"
+                tone="secondary"
+                onPress={() => setPendingClosure('stopped')}
+              />
+              <Button
+                label="Log boundary slip"
+                tone="secondary"
+                onPress={() => setPendingClosure('slipped')}
+              />
+            </>
+          )}
         </Card>
       ) : (
         <Card>
           <Text variant="title">No active reward</Text>
-          <Text muted>Spin to earn a timed reward session.</Text>
+          <Text muted>
+            {lastClosure
+              ? `${rewardClosureResult[lastClosure.mode]} ${lastClosure.rewardName} is closed.`
+              : 'Spin to earn a timed reward session.'}
+          </Text>
+          {lastClosure?.mode === 'slipped' ? (
+            <Button
+              label="Open repair check-in"
+              tone="secondary"
+              onPress={() => router.push('/checkin')}
+            />
+          ) : null}
         </Card>
       )}
 
@@ -191,7 +266,12 @@ export default function RewardsScreen() {
               onPress={() => setEditingRewardId(reward.id)}
             />
           )}
-          <Button label="Archive" tone="secondary" onPress={() => archiveReward(reward.id)} />
+          <ConfirmActionButton
+            label="Archive"
+            confirmLabel="Confirm archive reward"
+            message="This hides the reward from new spins but keeps old grant history."
+            onConfirm={() => archiveReward(reward.id)}
+          />
         </Card>
       ))}
 

@@ -64,6 +64,49 @@ describe('habit completion flow', () => {
     expect(state.completions).toHaveLength(1);
     expect(state.tokens).toHaveLength(1);
     expect(state.lastCompletionFeedback).toMatchObject({
+      status: 'completed',
+      habitId: habit.id,
+      completionId: firstCompletion?.id,
+    });
+  });
+
+  it('shows rate-limit feedback after the spin handoff is already used', () => {
+    const { habit } = createOnboardedHabit();
+
+    const firstCompletion = useAppStore.getState().logHabitCompletion({
+      habitId: habit.id,
+      completedAt: '2026-04-23T13:10:00Z',
+      tokenSeed: 'first-rep-token',
+    });
+
+    if (!firstCompletion) {
+      throw new Error('Expected first completion fixture.');
+    }
+
+    useAppStore.setState({
+      spinResults: [
+        {
+          id: 'spin-used-handoff',
+          spunAt: '2026-04-23T13:11:00Z',
+          habitCompletionId: firstCompletion.id,
+          cashedInTokenIds: [],
+          activatedMaxTier: 1,
+          rawLandedSlice: 'tier1',
+          awardedTier: 1,
+          wasNearMiss: false,
+          seed: 'used-handoff',
+        },
+      ],
+    });
+
+    const secondCompletion = useAppStore.getState().logHabitCompletion({
+      habitId: habit.id,
+      completedAt: '2026-04-23T13:10:20Z',
+      tokenSeed: 'second-rep-token',
+    });
+
+    expect(secondCompletion).toBeUndefined();
+    expect(useAppStore.getState().lastCompletionFeedback).toMatchObject({
       status: 'rate_limited',
       habitId: habit.id,
       secondsRemaining: 10,

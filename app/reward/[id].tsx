@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -8,6 +9,7 @@ import { Text } from '@/components/ui/Text';
 import { buildActiveRewardSessionDetails } from '@/game/spinComprehension';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
+import { spacing } from '@/theme/spacing';
 import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const renderCountdown = (remainingMs: number): string => {
@@ -18,7 +20,7 @@ const renderCountdown = (remainingMs: number): string => {
 };
 
 interface ClosedRewardState {
-  mode: 'completed' | 'stopped' | 'slipped';
+  mode: 'completed' | 'stopped' | 'slipped' | 'expired';
   name: string;
 }
 
@@ -35,12 +37,25 @@ const closedRewardCopy: Record<ClosedRewardState['mode'], { title: string; messa
     title: 'Boundary slip logged',
     message: 'No drama. The slip is recorded, and the next loop can be repaired.',
   },
+  expired: {
+    title: 'Reward expired',
+    message: 'The timer closed the session. Check in or log a tiny rep when you are ready.',
+  },
+};
+
+const confirmClosureCopy: Record<Exclude<ClosedRewardState['mode'], 'expired'>, string> = {
+  completed: 'Confirm the reward stayed inside the boundary and is complete.',
+  stopped: 'Confirm you stopped early and kept the boundary clean.',
+  slipped: 'Confirm the reward escaped the boundary so the app can help you repair it.',
 };
 
 export default function RewardActiveScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const rewardId = params.id;
   const [closedReward, setClosedReward] = useState<ClosedRewardState | undefined>(undefined);
+  const [pendingClosure, setPendingClosure] = useState<
+    Exclude<ClosedRewardState['mode'], 'expired'> | undefined
+  >(undefined);
   const rewards = useAppStore((state) => state.rewards);
   const rewardGrants = useAppStore((state) => state.rewardGrants);
   const activeRewardSession = useAppStore((state) => state.activeRewardSession);
@@ -87,17 +102,30 @@ export default function RewardActiveScreen() {
     setClosedReward({ mode: 'slipped', name: activeReward.name });
     recordRewardBoundarySlip();
   };
+  const expiredGrant = rewardId
+    ? rewardGrants
+        .slice()
+        .filter((grant) => grant.rewardId === rewardId && grant.outcome === 'expired')
+        .sort((left, right) => (right.closedAt ?? '').localeCompare(left.closedAt ?? ''))[0]
+    : undefined;
+  const expiredReward = expiredGrant
+    ? rewards.find((reward) => reward.id === expiredGrant.rewardId)
+    : undefined;
 
   if (!activeRewardSession || !activeGrant || !activeReward) {
-    if (closedReward) {
-      const copy = closedRewardCopy[closedReward.mode];
+    const recoveryState =
+      closedReward ??
+      (expiredReward ? { mode: 'expired' as const, name: expiredReward.name } : undefined);
+
+    if (recoveryState) {
+      const copy = closedRewardCopy[recoveryState.mode];
 
       return (
         <Screen>
           <Card>
             <Text variant="display">{copy.title}</Text>
             <Text muted>
-              {closedReward.name} is done for now. {copy.message}
+              {recoveryState.name} is done for now. {copy.message}
             </Text>
             <Button label="Log another rep" onPress={() => router.replace('/')} />
             <Button
@@ -158,9 +186,49 @@ export default function RewardActiveScreen() {
             {line}
           </Text>
         ))}
-        <Button label="Mark complete" onPress={completeReward} />
-        <Button label="Stop clean" tone="secondary" onPress={stopRewardClean} />
-        <Button label="Log boundary slip" tone="secondary" onPress={logBoundarySlip} />
+        {pendingClosure ? (
+          <View style={{ gap: spacing.sm }}>
+            <Text variant="title">Confirm boundary close</Text>
+            <Text muted>{confirmClosureCopy[pendingClosure]}</Text>
+            <Button
+              label={
+                pendingClosure === 'completed'
+                  ? 'Confirm complete'
+                  : pendingClosure === 'stopped'
+                    ? 'Confirm stop clean'
+                    : 'Confirm boundary slip'
+              }
+              onPress={() => {
+                if (pendingClosure === 'completed') {
+                  completeReward();
+                } else if (pendingClosure === 'stopped') {
+                  stopRewardClean();
+                } else {
+                  logBoundarySlip();
+                }
+              }}
+            />
+            <Button
+              label="Keep reward open"
+              tone="secondary"
+              onPress={() => setPendingClosure(undefined)}
+            />
+          </View>
+        ) : (
+          <>
+            <Button label="Mark complete" onPress={() => setPendingClosure('completed')} />
+            <Button
+              label="Stop clean"
+              tone="secondary"
+              onPress={() => setPendingClosure('stopped')}
+            />
+            <Button
+              label="Log boundary slip"
+              tone="secondary"
+              onPress={() => setPendingClosure('slipped')}
+            />
+          </>
+        )}
       </Card>
     </Screen>
   );

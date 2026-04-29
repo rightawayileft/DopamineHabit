@@ -12,6 +12,7 @@ import {
 } from '@/store/persistence';
 
 interface PersistedEnvelope {
+  exportedAt?: string;
   state: Partial<AppState>;
   version: number;
 }
@@ -153,7 +154,18 @@ describe('persistence migrations', () => {
     const parsed = JSON.parse(exported) as PersistedEnvelope;
 
     expect(parsed.version).toBe(APP_STORE_PERSIST_VERSION);
+    expect(parsed.exportedAt).toBeDefined();
     expect(parsed.state.settings?.nakedRuleAcceptedAt).toBe('2026-04-23T12:00:00Z');
+
+    const preview = useAppStore.getState().previewImportLocalData(exported);
+    expect(preview).toMatchObject({
+      status: 'ready',
+      summary: expect.objectContaining({
+        version: APP_STORE_PERSIST_VERSION,
+        habits: 0,
+        rewards: 0,
+      }),
+    });
 
     useAppStore.getState().resetLocalData();
     expect(useAppStore.getState().settings.nakedRuleAcceptedAt).toBe('');
@@ -170,6 +182,18 @@ describe('persistence migrations', () => {
     expect(persistedAfterImport?.version).toBe(APP_STORE_PERSIST_VERSION);
   });
 
+  it('rejects raw JSON objects for user-facing imports', () => {
+    useAppStore.getState().acceptNakedRule('2026-04-23T12:00:00Z');
+    const preview = useAppStore.getState().previewImportLocalData('{}');
+    const result = useAppStore.getState().importLocalData('{}');
+
+    expect(preview.status).toBe('failed');
+    expect(result.status).toBe('failed');
+    expect(useAppStore.getState().settings.nakedRuleAcceptedAt).toBe(
+      '2026-04-23T12:00:00Z',
+    );
+  });
+
   it('rejects invalid import JSON without changing state', () => {
     useAppStore.getState().acceptNakedRule('2026-04-23T12:00:00Z');
 
@@ -179,5 +203,23 @@ describe('persistence migrations', () => {
     expect(useAppStore.getState().settings.nakedRuleAcceptedAt).toBe(
       '2026-04-23T12:00:00Z',
     );
+  });
+
+  it('repairs orphan active reward sessions during migration', () => {
+    const migrated = migratePersistedAppState(
+      {
+        currentState: 'REWARD_ACTIVE',
+        activeRewardSession: {
+          rewardGrantId: 'missing-grant',
+          expiresAt: '2026-04-23T12:10:00Z',
+        },
+        rewards: [],
+        rewardGrants: [],
+      },
+      APP_STORE_PERSIST_VERSION,
+    );
+
+    expect(migrated.activeRewardSession).toBeUndefined();
+    expect(migrated.currentState).toBe('IDLE');
   });
 });

@@ -110,6 +110,25 @@ describe('app state machine', () => {
   });
 
   it('persists active reward timer state through simulated restart', () => {
+    useAppStore.setState({
+      rewards: [
+        {
+          id: 'reward-1',
+          name: 'Phone game',
+          tier: 1,
+          durationMinutes: 10,
+        },
+      ],
+      rewardGrants: [
+        {
+          id: 'grant-1',
+          rewardId: 'reward-1',
+          grantedAt: '2026-04-23T12:00:00Z',
+          source: 'spin',
+          durationMinutes: 10,
+        },
+      ],
+    });
     useAppStore.getState().setActiveRewardSession({
       rewardGrantId: 'grant-1',
       expiresAt: '2026-04-23T12:10:00Z',
@@ -133,6 +152,14 @@ describe('app state machine', () => {
 
   it('deterministically ends expired reward sessions after reload sync', () => {
     useAppStore.setState({
+      rewards: [
+        {
+          id: 'reward-1',
+          name: 'Phone game',
+          tier: 1,
+          durationMinutes: 10,
+        },
+      ],
       rewardGrants: [
         {
           id: 'grant-1',
@@ -168,6 +195,58 @@ describe('app state machine', () => {
     expect(useAppStore.getState().rewardGrants[0]?.endedAt).toBe('2026-04-23T12:10:01Z');
     expect(useAppStore.getState().rewardGrants[0]?.closedAt).toBe('2026-04-23T12:10:01Z');
     expect(useAppStore.getState().rewardGrants[0]?.outcome).toBe('expired');
+  });
+
+  it('expires reward sessions using actual time instead of ISO string order', () => {
+    useAppStore.setState({
+      rewards: [
+        {
+          id: 'reward-1',
+          name: 'Phone game',
+          tier: 1,
+          durationMinutes: 10,
+        },
+      ],
+      rewardGrants: [
+        {
+          id: 'grant-1',
+          rewardId: 'reward-1',
+          grantedAt: '2026-04-23T12:00:00Z',
+          source: 'spin',
+          durationMinutes: 10,
+        },
+      ],
+      activeRewardSession: {
+        rewardGrantId: 'grant-1',
+        expiresAt: '2026-04-23T12:10:00Z',
+      },
+      currentState: 'REWARD_ACTIVE',
+    });
+
+    useAppStore.getState().syncRewardSessionState('2026-04-23T08:11:00-04:00');
+
+    expect(useAppStore.getState().activeRewardSession).toBeUndefined();
+    expect(useAppStore.getState().rewardGrants[0]).toMatchObject({
+      outcome: 'expired',
+      closedAt: '2026-04-23T08:11:00-04:00',
+    });
+  });
+
+  it('clears orphan active reward sessions during sync', () => {
+    useAppStore.setState({
+      activeRewardSession: {
+        rewardGrantId: 'missing-grant',
+        expiresAt: '2026-04-23T12:10:00Z',
+      },
+      currentState: 'REWARD_ACTIVE',
+      rewardGrants: [],
+      rewards: [],
+    });
+
+    useAppStore.getState().syncRewardSessionState('2026-04-23T12:00:00Z');
+
+    expect(useAppStore.getState().activeRewardSession).toBeUndefined();
+    expect(useAppStore.getState().currentState).toBe('IDLE');
   });
 
   it('distinguishes completed, stopped, and slipped reward boundaries', () => {

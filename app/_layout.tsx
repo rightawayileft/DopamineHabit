@@ -13,11 +13,13 @@ export default function RootLayout() {
   );
   const integrityCheckInTime = useAppStore((state) => state.settings.integrityCheckInTime);
   const markAppSeen = useAppStore((state) => state.markAppSeen);
+  const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   useCheckInReminder(integrityCheckInTime, checkInReminderEnabled);
 
   useEffect(() => {
     markAppSeen();
-  }, [markAppSeen]);
+    syncRewardSessionState();
+  }, [markAppSeen, syncRewardSessionState]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>

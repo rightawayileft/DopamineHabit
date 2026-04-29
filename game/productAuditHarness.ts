@@ -389,7 +389,7 @@ export const coreRouteSmokeChecks: readonly RouteSmokeCheck[] = [
     route: '/settings',
     filePath: 'app/settings.tsx',
     userGoal: 'Control reminders, feedback, build visibility, and local data recovery.',
-    mustExpose: ['Settings', 'Daily integrity check-in', 'Build and local data'],
+    mustExpose: ['Settings', 'Daily integrity check-in', 'Data status'],
   },
   {
     route: '/stats',

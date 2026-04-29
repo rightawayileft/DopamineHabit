@@ -101,6 +101,7 @@ export interface AppActions {
   markAppSeen: (timestamp?: ISODate) => void;
   clearCompletionFeedback: () => void;
   exportLocalData: () => string;
+  previewImportLocalData: (serializedData: string) => ImportLocalDataPreview;
   importLocalData: (serializedData: string) => ImportLocalDataResult;
   resetLocalData: () => void;
   resetForTests: () => void;
@@ -213,6 +214,7 @@ type PersistedAppState = AppState;
 
 interface PersistedEnvelope {
   state: Partial<PersistedAppState>;
+  exportedAt?: ISODate;
   version: number;
 }
 
@@ -221,6 +223,26 @@ export const APP_STORE_PERSIST_VERSION = 3;
 export interface ImportLocalDataResult {
   status: 'imported' | 'failed';
   message: string;
+}
+
+export interface LocalDataSummary {
+  version: number;
+  exportedAt?: ISODate;
+  habits: number;
+  jars: number;
+  rewards: number;
+  completions: number;
+  tokens: number;
+  spinResults: number;
+  rewardGrants: number;
+  integrityCheckIns: number;
+  hasActiveRewardSession: boolean;
+}
+
+export interface ImportLocalDataPreview {
+  status: 'ready' | 'failed';
+  message: string;
+  summary?: LocalDataSummary;
 }
 
 const legalTransitions: Record<AppMachineState, AppMachineState[]> = {
@@ -454,6 +476,41 @@ const normalizeRewardGrants = (
     };
   });
 
+const normalizeActiveRewardSession = ({
+  rewardGrants,
+  rewards,
+  value,
+}: {
+  rewardGrants: RewardGrant[];
+  rewards: Reward[];
+  value: unknown;
+}): ActiveRewardSession | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const rewardGrantId = optionalString(value.rewardGrantId);
+  const expiresAt = optionalString(value.expiresAt);
+
+  if (!rewardGrantId || !expiresAt) {
+    return undefined;
+  }
+
+  const grant = rewardGrants.find((candidate) => candidate.id === rewardGrantId);
+
+  if (!grant || grant.closedAt || grant.outcome) {
+    return undefined;
+  }
+
+  const reward = rewards.find((candidate) => candidate.id === grant.rewardId);
+
+  if (!reward) {
+    return undefined;
+  }
+
+  return { rewardGrantId, expiresAt };
+};
+
 const normalizeSettings = (value: unknown, fallback: UserSettings): UserSettings => {
   const settings = isRecord(value) ? value : {};
   const rateLimitSecondsPerHabit = isRecord(settings.rateLimitSecondsPerHabit)
@@ -508,18 +565,30 @@ export const migratePersistedAppState = (
 ): PersistedAppState => {
   const initialState = createInitialAppState();
   const state = isRecord(persistedState) ? persistedState : {};
+  const rewards = arrayOrFallback<Reward>(state.rewards, initialState.rewards);
+  const rewardGrants = normalizeRewardGrants(state.rewardGrants, initialState.rewardGrants);
+  const activeRewardSession = normalizeActiveRewardSession({
+    rewardGrants,
+    rewards,
+    value: state.activeRewardSession,
+  });
+  const persistedMachineState =
+    (state.currentState as AppMachineState | undefined) ?? initialState.currentState;
 
   return {
     ...initialState,
-    currentState: (state.currentState as AppMachineState | undefined) ?? initialState.currentState,
-    activeRewardSession: state.activeRewardSession as ActiveRewardSession | undefined,
+    currentState:
+      persistedMachineState === 'REWARD_ACTIVE' && !activeRewardSession
+        ? 'IDLE'
+        : persistedMachineState,
+    activeRewardSession,
     lastCompletionFeedback: state.lastCompletionFeedback as CompletionFeedback | undefined,
     habits: arrayOrFallback<Habit>(state.habits, initialState.habits),
     completions: normalizeCompletions(state.completions, initialState.completions),
     tokens: arrayOrFallback<Token>(state.tokens, initialState.tokens),
     jars: normalizeJars(state.jars, initialState.jars),
-    rewards: arrayOrFallback<Reward>(state.rewards, initialState.rewards),
-    rewardGrants: normalizeRewardGrants(state.rewardGrants, initialState.rewardGrants),
+    rewards,
+    rewardGrants,
     spinResults: arrayOrFallback<SpinResult>(state.spinResults, initialState.spinResults),
     pendingSpin: state.pendingSpin as PendingSpinContext | undefined,
     bonusChains: arrayOrFallback<BonusChain>(state.bonusChains, initialState.bonusChains),
@@ -537,30 +606,73 @@ export const migratePersistedAppState = (
 };
 
 const createPersistedEnvelope = (state: AppStore): PersistedEnvelope => ({
+  exportedAt: nowIso(),
   version: APP_STORE_PERSIST_VERSION,
   state: persistableState(state),
 });
 
+const summarizeLocalData = (
+  state: PersistedAppState,
+  version: number,
+  exportedAt?: ISODate,
+): LocalDataSummary => ({
+  version,
+  ...(exportedAt === undefined ? {} : { exportedAt }),
+  habits: state.habits.length,
+  jars: state.jars.length,
+  rewards: state.rewards.length,
+  completions: state.completions.length,
+  tokens: state.tokens.length,
+  spinResults: state.spinResults.length,
+  rewardGrants: state.rewardGrants.length,
+  integrityCheckIns: state.integrityCheckIns.length,
+  hasActiveRewardSession: Boolean(state.activeRewardSession),
+});
+
 const parseImportEnvelope = (
   serializedData: string,
-): { state: unknown; version: number } | undefined => {
+): { exportedAt?: ISODate; state: unknown; version: number } | undefined => {
   const parsed = JSON.parse(serializedData) as unknown;
 
   if (!isRecord(parsed)) {
     return undefined;
   }
 
-  if ('state' in parsed) {
-    return {
-      state: parsed.state,
-      version: typeof parsed.version === 'number' ? parsed.version : 0,
-    };
+  if (!('state' in parsed)) {
+    return undefined;
   }
 
   return {
-    state: parsed,
-    version: 0,
+    ...(typeof parsed.exportedAt === 'string' ? { exportedAt: parsed.exportedAt } : {}),
+    state: parsed.state,
+    version: typeof parsed.version === 'number' ? parsed.version : 0,
   };
+};
+
+const buildImportPreview = (serializedData: string): ImportLocalDataPreview => {
+  try {
+    const envelope = parseImportEnvelope(serializedData);
+
+    if (!envelope) {
+      return {
+        status: 'failed',
+        message: 'Import must be a DopamineHabit export with a state envelope.',
+      };
+    }
+
+    const migratedState = migratePersistedAppState(envelope.state, envelope.version);
+
+    return {
+      status: 'ready',
+      message: `Ready to import local data from version ${envelope.version}.`,
+      summary: summarizeLocalData(migratedState, envelope.version, envelope.exportedAt),
+    };
+  } catch {
+    return {
+      status: 'failed',
+      message: 'Import preview failed. Check that the pasted text is valid JSON.',
+    };
+  }
 };
 
 const applyJarTokenEarnings = ({
@@ -1117,13 +1229,22 @@ export const useAppStore = create<AppStore>()(
         if (!rateLimit.allowed) {
           const occurredAt = completedAt;
           set((current) => ({
-            lastCompletionFeedback: {
-              status: 'rate_limited',
-              habitId,
-              occurredAt,
-              secondsRemaining: rateLimit.secondsRemaining,
-              message: `Wait ${rateLimit.secondsRemaining}s before logging this habit again.`,
-            },
+            lastCompletionFeedback:
+              current.lastCompletionFeedback?.status === 'completed' &&
+              current.lastCompletionFeedback.habitId === habitId &&
+              current.lastCompletionFeedback.completionId !== undefined &&
+              !current.spinResults.some(
+                (spinResult) =>
+                  spinResult.habitCompletionId === current.lastCompletionFeedback?.completionId,
+              )
+                ? current.lastCompletionFeedback
+                : {
+                    status: 'rate_limited',
+                    habitId,
+                    occurredAt,
+                    secondsRemaining: rateLimit.secondsRemaining,
+                    message: `Wait ${rateLimit.secondsRemaining}s before logging this habit again.`,
+                  },
             integrityRuntime: {
               ...current.integrityRuntime,
               warnings: [
@@ -1743,13 +1864,29 @@ export const useAppStore = create<AppStore>()(
       },
 
       syncRewardSessionState: (timestamp = nowIso()) => {
-        const activeRewardSession = get().activeRewardSession;
+        const state = get();
+        const activeRewardSession = state.activeRewardSession;
 
         if (!activeRewardSession) {
           return;
         }
 
-        if (activeRewardSession.expiresAt.localeCompare(timestamp) <= 0) {
+        const activeGrant = state.rewardGrants.find(
+          (grant) => grant.id === activeRewardSession.rewardGrantId,
+        );
+        const activeReward = activeGrant
+          ? state.rewards.find((reward) => reward.id === activeGrant.rewardId)
+          : undefined;
+
+        if (!activeGrant || !activeReward || activeGrant.closedAt || activeGrant.outcome) {
+          set({
+            activeRewardSession: undefined,
+            currentState: 'IDLE',
+          });
+          return;
+        }
+
+        if (isAtOrAfter(timestamp, activeRewardSession.expiresAt)) {
           set((state) => ({
             activeRewardSession: undefined,
             currentState: 'IDLE',
@@ -1839,6 +1976,8 @@ export const useAppStore = create<AppStore>()(
 
       exportLocalData: () => JSON.stringify(createPersistedEnvelope(get()), null, 2),
 
+      previewImportLocalData: (serializedData) => buildImportPreview(serializedData),
+
       importLocalData: (serializedData) => {
         try {
           const envelope = parseImportEnvelope(serializedData);
@@ -1846,7 +1985,7 @@ export const useAppStore = create<AppStore>()(
           if (!envelope) {
             return {
               status: 'failed',
-              message: 'Import must be a DopamineHabit state object or exported envelope.',
+              message: 'Import must be a DopamineHabit export with a state envelope.',
             };
           }
 

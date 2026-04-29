@@ -91,7 +91,8 @@ export function HabitForm({ activeJars, initialHabit, submitLabel, onSubmit }: H
   const [name, setName] = useState(initialHabit?.name ?? '');
   const [cue, setCue] = useState(initialHabit?.cue ?? '');
   const [jarId, setJarId] = useState(initialHabit?.jarId ?? firstJarId);
-  const canSubmit = name.trim().length > 0 && Boolean(jarId);
+  const selectedJarIsActive = activeJars.some((jar) => jar.id === jarId);
+  const canSubmit = name.trim().length > 0 && selectedJarIsActive;
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -101,6 +102,9 @@ export function HabitForm({ activeJars, initialHabit, submitLabel, onSubmit }: H
       <Input value={cue} onChangeText={setCue} placeholder="Walking to the kitchen" />
       <FieldLabel>Jar</FieldLabel>
       {activeJars.length === 0 ? <Text muted>Create an active jar first.</Text> : null}
+      {jarId && !selectedJarIsActive ? (
+        <Text style={{ color: colors.warning }}>Select an active jar before saving.</Text>
+      ) : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {activeJars.map((jar) => (
           <Button

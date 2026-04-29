@@ -18,10 +18,10 @@ const answerLabel = (answer: IntegrityCheckIn['answer']): string => {
   }
 
   if (answer === 'partially') {
-    return 'Partial slip';
+    return 'Some drift';
   }
 
-  return 'Boundary broke';
+  return 'Needs repair';
 };
 
 const yesterdayKey = (): string => {
@@ -81,12 +81,12 @@ export default function IntegrityCheckInScreen() {
             <Text muted>Did the reward boundary hold today?</Text>
             <Button label="Held" onPress={() => answerIntegrityCheckIn('yes')} />
             <Button
-              label="Partly slipped"
+              label="Some drift"
               tone="secondary"
               onPress={() => answerIntegrityCheckIn('partially')}
             />
             <Button
-              label="Boundary broke"
+              label="Needs repair"
               tone="secondary"
               onPress={() => answerIntegrityCheckIn('no')}
             />
@@ -97,10 +97,10 @@ export default function IntegrityCheckInScreen() {
       <Card>
         <Text variant="title">Repair signal</Text>
         <Text muted style={{ fontVariant: ['tabular-nums'] }}>
-          Boundary-held streak: {integrityRuntime.honestyStreak}
+          Stable days: {integrityRuntime.honestyStreak}
         </Text>
         <Text muted style={{ fontVariant: ['tabular-nums'] }}>
-          Repair signals logged: {integrityRuntime.honestAdmissionCount}
+          Repair notes logged: {integrityRuntime.honestAdmissionCount}
         </Text>
       </Card>
 

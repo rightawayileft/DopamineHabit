@@ -4,6 +4,7 @@ import { Jar } from '@/components/Jar/Jar';
 import { JarForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmActionButton } from '@/components/ui/ConfirmActionButton';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { buildJarProgress } from '@/game/milestones';
@@ -70,7 +71,12 @@ export default function JarsScreen() {
               <Text muted>All milestones unlocked.</Text>
             )}
             <Button label="Details" onPress={() => router.push(`/jar/${jar.id}`)} />
-            <Button label="Archive" tone="secondary" onPress={() => archiveJar(jar.id)} />
+            <ConfirmActionButton
+              label="Archive"
+              confirmLabel="Confirm archive jar"
+              message="This pauses linked habits until the jar is restored."
+              onConfirm={() => archiveJar(jar.id)}
+            />
           </Card>
         );
       })}

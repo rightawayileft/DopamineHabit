@@ -74,6 +74,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Active reward sessions block new spins until completed, stopped cleanly, logged as a slip, or expired.
 - Reward history should explain what was earned, when, why, and how the session closed.
 - Active reward screens should help users protect the granted session, mark it complete, stop clean, or log a boundary slip.
+- Reward closure actions should require deliberate confirmation, and expired or orphaned sessions should recover without blocking new spins.
 
 ### Bonus Rounds
 
@@ -99,7 +100,9 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 
 - Settings should expose haptics, sound, reduced motion, check-in time, build/version information, and local data controls.
 - Settings should show notification permission/reminder status when daily reminders are configured.
-- Destructive local data actions must require confirmation.
+- Settings should show the active local storage backend and local data counts so users can tell whether data is durable.
+- Import should preview a DopamineHabit export before replacing local state; arbitrary raw JSON should not be accepted from the user-facing import flow.
+- Destructive local data and archive actions must require confirmation.
 - Local DB reset/export/import belongs to the durability checkpoint.
 
 ### Stats

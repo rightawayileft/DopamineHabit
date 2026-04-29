@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -14,6 +15,8 @@ export interface FirstRepHeroProps {
 }
 
 export function FirstRepHero({ habit, onDone, reward }: FirstRepHeroProps) {
+  const [submitted, setSubmitted] = useState(false);
+
   return (
     <Card
       style={{
@@ -41,7 +44,14 @@ export function FirstRepHero({ habit, onDone, reward }: FirstRepHeroProps) {
           : 'your first reward'}
         .
       </Text>
-      <Button label="I did the rep" onPress={onDone} />
+      <Button
+        disabled={submitted}
+        label={submitted ? 'Rep logged' : 'I did the rep'}
+        onPress={() => {
+          setSubmitted(true);
+          onDone();
+        }}
+      />
     </Card>
   );
 }
