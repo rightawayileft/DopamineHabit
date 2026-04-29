@@ -383,7 +383,7 @@ export const coreRouteSmokeChecks: readonly RouteSmokeCheck[] = [
     route: '/checkin',
     filePath: 'app/checkin.tsx',
     userGoal: 'Answer the daily integrity check-in without shame-heavy copy.',
-    mustExpose: ['Integrity', 'Today', 'Scoreboard'],
+    mustExpose: ['Repair check-in', 'Today', 'Repair signal'],
   },
   {
     route: '/settings',

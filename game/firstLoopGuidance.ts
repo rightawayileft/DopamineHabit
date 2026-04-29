@@ -211,11 +211,11 @@ export const buildFirstSpinChecklist = (
     !input.hasActiveReward &&
     input.isCashInValid;
   const summary = input.hasPendingSpin
-    ? 'An interrupted spin is saved and ready to finish.'
-    : !input.hasRepReady
-      ? 'Complete a habit rep to unlock spin setup.'
+      ? 'An interrupted spin is saved and ready to finish.'
+      : !input.hasRepReady
+        ? 'Complete a habit rep to unlock spin setup.'
       : input.hasActiveReward
-        ? 'Finish or end the active reward before starting another spin.'
+        ? 'Close the active reward boundary before starting another spin.'
         : !input.isCashInValid
           ? input.cashInReason ?? 'Adjust the selected tokens before spinning.'
           : input.selectedTokenCount === 0

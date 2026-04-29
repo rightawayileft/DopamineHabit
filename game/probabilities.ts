@@ -3,6 +3,7 @@ import { createUuid } from '@/utils/uuid';
 export interface SpinInputs {
   activatedMaxTier: 1 | 2 | 3;
   seed?: string;
+  forceStarterReward?: boolean;
 }
 
 export interface ResolvedSpin {
@@ -39,7 +40,7 @@ export const mulberry32 = (seed: number): (() => number) => {
 
 export const seededRandom01 = (seed: string): number => mulberry32(hashSeedToUint32(seed))();
 
-export function resolveSpin({ activatedMaxTier, seed }: SpinInputs): ResolvedSpin {
+export function resolveSpin({ activatedMaxTier, forceStarterReward = false, seed }: SpinInputs): ResolvedSpin {
   const actualSeed = seed ?? createUuid();
   const roll = seededRandom01(actualSeed);
 
@@ -49,6 +50,10 @@ export function resolveSpin({ activatedMaxTier, seed }: SpinInputs): ResolvedSpi
   else if (roll < 0.9) rawLandedSlice = 'tier3';
   else if (roll < 0.92) rawLandedSlice = 'jackpot';
   else rawLandedSlice = 'bonus';
+
+  if (forceStarterReward && rawLandedSlice === 'bonus') {
+    rawLandedSlice = 'tier1';
+  }
 
   let awardedTier: ResolvedSpin['awardedTier'];
   let wasNearMiss = false;

@@ -54,6 +54,19 @@ const createReadyCompletion = () => {
   return { habit, completion };
 };
 
+const findBonusSeed = (): string => {
+  for (let index = 0; index < 100_000; index += 1) {
+    const seed = `bonus-${index}`;
+    const spin = resolveSpin({ activatedMaxTier: 1, seed });
+
+    if (spin.rawLandedSlice === 'bonus') {
+      return seed;
+    }
+  }
+
+  throw new Error('Unable to find bonus seed.');
+};
+
 const addCashInTokens = ({
   jarId,
   count,
@@ -147,6 +160,29 @@ describe('spin flow', () => {
 
     expect(cashedInTokens).toHaveLength(2);
     expect(cashedInTokens.every((token) => token.state === 'cashed_in')).toBe(true);
+  });
+
+  it('keeps the first eligible spin on a starter reward instead of bonus', () => {
+    const { completion } = createReadyCompletion();
+    const seed = findBonusSeed();
+
+    const pendingSpin = useAppStore.getState().prepareSpin({
+      habitCompletionId: completion.id,
+      activatedMaxTier: 1,
+      seed,
+    });
+    const result = useAppStore.getState().resolvePreparedSpin('starter-spin-result');
+
+    expect(pendingSpin?.resolvedSpin.rawLandedSlice).toBe('tier1');
+    expect(result).toMatchObject({
+      id: 'starter-spin-result',
+      rawLandedSlice: 'tier1',
+      awardedTier: 1,
+      wasNearMiss: false,
+      seed,
+    });
+    expect(useAppStore.getState().rewardGrants).toHaveLength(1);
+    expect(useAppStore.getState().activeBonusChainId).toBeUndefined();
   });
 
   it('does not prepare another spin for an already spun completion', () => {

@@ -16,7 +16,7 @@ Exports and Zustand persistence use this shape:
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "state": {
     "currentState": "IDLE",
     "habits": [],
@@ -33,6 +33,7 @@ The full `state` object is the `AppState` subset returned by the store `partiali
 - Missing top-level slices hydrate from `createInitialAppState()`.
 - Missing settings fields hydrate from `createInitialSettingsSlice()`.
 - Version 2 adds `settings.checkInReminderEnabled`, which defaults to `false` for migrated states.
+- Version 3 adds explicit reward grant `outcome` and `closedAt` fields. Legacy `endedAt` grants hydrate as `completed`, and legacy `endedEarlyAt` grants hydrate as `stopped`.
 - Missing integrity runtime fields hydrate from `createInitialIntegritySlice()`.
 - Legacy completions without `wasBonusRep` migrate to `wasBonusRep: false`.
 - Legacy jars without fun-money fields migrate to disabled fun money with a 50-cent default accrual value and a zero balance.

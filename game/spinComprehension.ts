@@ -79,7 +79,7 @@ export const buildSpinDisabledReason = (
   }
 
   if (input.hasActiveReward) {
-    return 'Finish or end the active reward before spinning again.';
+    return 'Close the active reward boundary before spinning again.';
   }
 
   if (!input.hasRepReady) {
@@ -146,12 +146,14 @@ export const buildActiveRewardSessionDetails = ({
 }: ActiveRewardSessionDetailsInput): ActiveRewardSessionDetails => ({
   title: `Active reward: ${reward.name}`,
   lines: [
-    `Granted from ${grant.source}.`,
+    grant.source === 'bonus'
+      ? 'You earned this from a bonus chain.'
+      : 'You earned this from the wheel.',
     grant.durationMinutes
       ? `Session length: ${grant.durationMinutes} min.`
       : 'Session length follows the reward configuration.',
     `Closes around ${expiresAt}.`,
     'Protect this session: use only the granted reward, then mark it complete.',
-    'End early if you stop before the timer is done.',
+    'Stop clean if you quit early. Log a slip if the reward escaped the boundary.',
   ],
 });

@@ -108,6 +108,45 @@ describe('persistence migrations', () => {
     expect(migrated.settings.checkInReminderEnabled).toBe(false);
   });
 
+  it('hydrates legacy reward grant closures into explicit outcomes', () => {
+    const migrated = migratePersistedAppState(
+      {
+        rewardGrants: [
+          {
+            id: 'legacy-complete',
+            rewardId: 'reward-1',
+            grantedAt: '2026-04-23T12:00:00Z',
+            source: 'spin',
+            endedAt: '2026-04-23T12:10:00Z',
+          },
+          {
+            id: 'legacy-stop',
+            rewardId: 'reward-1',
+            grantedAt: '2026-04-23T13:00:00Z',
+            source: 'spin',
+            endedEarlyAt: '2026-04-23T13:05:00Z',
+          },
+        ],
+      },
+      2,
+    );
+
+    expect(migrated.rewardGrants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'legacy-complete',
+          outcome: 'completed',
+          closedAt: '2026-04-23T12:10:00Z',
+        }),
+        expect.objectContaining({
+          id: 'legacy-stop',
+          outcome: 'stopped',
+          closedAt: '2026-04-23T13:05:00Z',
+        }),
+      ]),
+    );
+  });
+
   it('exports, imports, and resets local data through store actions', () => {
     useAppStore.getState().acceptNakedRule('2026-04-23T12:00:00Z');
     const exported = useAppStore.getState().exportLocalData();

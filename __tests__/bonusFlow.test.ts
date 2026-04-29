@@ -103,6 +103,22 @@ describe('bonus flow', () => {
       throw new Error('Expected completion fixture.');
     }
 
+    useAppStore.setState((state) => ({
+      rewardGrants: [
+        ...state.rewardGrants,
+        {
+          id: 'previous-grant',
+          rewardId: state.rewards[0]?.id ?? 'reward-1',
+          grantedAt: '2026-04-23T13:00:00Z',
+          source: 'spin',
+          durationMinutes: 3,
+          outcome: 'completed',
+          closedAt: '2026-04-23T13:03:00Z',
+          endedAt: '2026-04-23T13:03:00Z',
+        },
+      ],
+    }));
+
     useAppStore.getState().prepareSpin({
       habitCompletionId: completion.id,
       activatedMaxTier: 3,

@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/Text';
 import { buildActiveRewardSessionDetails } from '@/game/spinComprehension';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
+import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const renderCountdown = (remainingMs: number): string => {
   const totalSeconds = Math.ceil(remainingMs / 1000);
@@ -16,25 +17,25 @@ const renderCountdown = (remainingMs: number): string => {
   return `${minutes}:${`${seconds}`.padStart(2, '0')}`;
 };
 
-const formatRewardEndTime = (timestamp: string): string => {
-  const date = new Date(timestamp);
-
-  if (Number.isNaN(date.getTime())) {
-    return timestamp;
-  }
-
-  return date.toLocaleString(undefined, {
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    month: 'short',
-  });
-};
-
 interface ClosedRewardState {
-  mode: 'completed' | 'ended';
+  mode: 'completed' | 'stopped' | 'slipped';
   name: string;
 }
+
+const closedRewardCopy: Record<ClosedRewardState['mode'], { title: string; message: string }> = {
+  completed: {
+    title: 'Reward complete',
+    message: 'The boundary held. The gate is clear for another rep.',
+  },
+  stopped: {
+    title: 'Reward stopped clean',
+    message: 'Nice boundary. You stopped before the reward took over.',
+  },
+  slipped: {
+    title: 'Boundary slip logged',
+    message: 'No drama. The slip is recorded, and the next loop can be repaired.',
+  },
+};
 
 export default function RewardActiveScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
@@ -45,6 +46,7 @@ export default function RewardActiveScreen() {
   const activeRewardSession = useAppStore((state) => state.activeRewardSession);
   const endActiveRewardSession = useAppStore((state) => state.endActiveRewardSession);
   const endRewardSessionEarly = useAppStore((state) => state.endRewardSessionEarly);
+  const recordRewardBoundarySlip = useAppStore((state) => state.recordRewardBoundarySlip);
   const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   const remainingMs = useTimer(activeRewardSession?.expiresAt);
 
@@ -68,27 +70,41 @@ export default function RewardActiveScreen() {
     endActiveRewardSession();
   };
 
-  const endRewardEarly = () => {
+  const stopRewardClean = () => {
     if (!activeReward) {
       return;
     }
 
-    setClosedReward({ mode: 'ended', name: activeReward.name });
+    setClosedReward({ mode: 'stopped', name: activeReward.name });
     endRewardSessionEarly();
+  };
+
+  const logBoundarySlip = () => {
+    if (!activeReward) {
+      return;
+    }
+
+    setClosedReward({ mode: 'slipped', name: activeReward.name });
+    recordRewardBoundarySlip();
   };
 
   if (!activeRewardSession || !activeGrant || !activeReward) {
     if (closedReward) {
+      const copy = closedRewardCopy[closedReward.mode];
+
       return (
         <Screen>
           <Card>
-            <Text variant="display">
-              {closedReward.mode === 'completed' ? 'Reward complete' : 'Reward closed'}
-            </Text>
+            <Text variant="display">{copy.title}</Text>
             <Text muted>
-              {closedReward.name} is done for now. The gate is clear again.
+              {closedReward.name} is done for now. {copy.message}
             </Text>
             <Button label="Log another rep" onPress={() => router.replace('/')} />
+            <Button
+              label="Open repair check-in"
+              tone="secondary"
+              onPress={() => router.push('/checkin')}
+            />
             <Button
               label="Review progress"
               tone="secondary"
@@ -125,7 +141,7 @@ export default function RewardActiveScreen() {
   const sessionDetails = buildActiveRewardSessionDetails({
     reward: activeReward,
     grant: activeGrant,
-    expiresAt: formatRewardEndTime(activeRewardSession.expiresAt),
+    expiresAt: formatLocalDateTime(activeRewardSession.expiresAt),
   });
 
   return (
@@ -133,7 +149,7 @@ export default function RewardActiveScreen() {
       <Card>
         <Text variant="display">{activeReward.name}</Text>
         <Text muted>Time remaining: {renderCountdown(remainingMs)}</Text>
-        <Text muted>Ends around {formatRewardEndTime(activeRewardSession.expiresAt)}</Text>
+        <Text muted>Ends around {formatLocalDateTime(activeRewardSession.expiresAt)}</Text>
       </Card>
       <Card>
         <Text variant="title">{sessionDetails.title}</Text>
@@ -142,8 +158,9 @@ export default function RewardActiveScreen() {
             {line}
           </Text>
         ))}
-        <Button label="Mark reward complete" onPress={completeReward} />
-        <Button label="End reward early" tone="secondary" onPress={endRewardEarly} />
+        <Button label="Mark complete" onPress={completeReward} />
+        <Button label="Stop clean" tone="secondary" onPress={stopRewardClean} />
+        <Button label="Log boundary slip" tone="secondary" onPress={logBoundarySlip} />
       </Card>
     </Screen>
   );

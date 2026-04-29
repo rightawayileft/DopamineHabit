@@ -86,9 +86,13 @@ export interface RewardGrant {
   spinResultId?: UUID;
   bonusChainId?: UUID;
   durationMinutes?: number;
+  outcome?: RewardGrantOutcome;
+  closedAt?: ISODate;
   endedAt?: ISODate;
   endedEarlyAt?: ISODate;
 }
+
+export type RewardGrantOutcome = 'completed' | 'stopped' | 'slipped' | 'expired';
 
 export interface BonusChain {
   id: UUID;

@@ -37,6 +37,7 @@ import type {
   PendingSpinContext,
   Reward,
   RewardGrant,
+  RewardGrantOutcome,
   SpinResult,
   Token,
   UserSettings,
@@ -93,6 +94,7 @@ export interface AppActions {
   setActiveRewardSession: (session: ActiveRewardSession | undefined) => void;
   endActiveRewardSession: (endedAt?: ISODate) => void;
   endRewardSessionEarly: (endedEarlyAt?: ISODate) => void;
+  recordRewardBoundarySlip: (slippedAt?: ISODate) => void;
   syncRewardSessionState: (timestamp?: ISODate) => void;
   answerIntegrityCheckIn: (answer: 'yes' | 'no' | 'partially', answeredAt?: ISODate) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
@@ -214,7 +216,7 @@ interface PersistedEnvelope {
   version: number;
 }
 
-export const APP_STORE_PERSIST_VERSION = 2;
+export const APP_STORE_PERSIST_VERSION = 3;
 
 export interface ImportLocalDataResult {
   status: 'imported' | 'failed';
@@ -324,6 +326,31 @@ const latestBonusSpin = (chain: BonusChain): BonusSpin | undefined =>
 const isAtOrAfter = (timestamp: ISODate, target: ISODate): boolean =>
   new Date(timestamp).getTime() >= new Date(target).getTime();
 
+const closeRewardGrant = ({
+  closedAt,
+  grant,
+  outcome,
+  rewardGrantId,
+}: {
+  closedAt: ISODate;
+  grant: RewardGrant;
+  outcome: RewardGrantOutcome;
+  rewardGrantId: UUID;
+}): RewardGrant => {
+  if (grant.id !== rewardGrantId || grant.closedAt || grant.outcome) {
+    return grant;
+  }
+
+  return {
+    ...grant,
+    outcome,
+    closedAt,
+    ...(outcome === 'completed' || outcome === 'expired'
+      ? { endedAt: closedAt }
+      : { endedEarlyAt: closedAt }),
+  };
+};
+
 const optionalTrimmed = (value: string | undefined): string | undefined => {
   const trimmed = value?.trim();
 
@@ -385,6 +412,47 @@ const normalizeJars = (value: unknown, fallback: Jar[]): Jar[] =>
     createdAt: jar.createdAt ?? nowIso(),
     ...(jar.archivedAt ? { archivedAt: jar.archivedAt } : {}),
   }));
+
+const inferRewardGrantOutcome = (
+  grant: Partial<RewardGrant>,
+): RewardGrantOutcome | undefined => {
+  if (grant.outcome) {
+    return grant.outcome;
+  }
+
+  if (grant.endedEarlyAt) {
+    return 'stopped';
+  }
+
+  if (grant.endedAt) {
+    return 'completed';
+  }
+
+  return undefined;
+};
+
+const normalizeRewardGrants = (
+  value: unknown,
+  fallback: RewardGrant[],
+): RewardGrant[] =>
+  arrayOrFallback<Partial<RewardGrant>>(value, fallback).map((grant) => {
+    const outcome = inferRewardGrantOutcome(grant);
+    const closedAt = grant.closedAt ?? grant.endedAt ?? grant.endedEarlyAt;
+
+    return {
+      id: grant.id ?? createUuid(),
+      rewardId: grant.rewardId ?? '',
+      grantedAt: grant.grantedAt ?? nowIso(),
+      source: grant.source ?? 'spin',
+      ...(grant.spinResultId ? { spinResultId: grant.spinResultId } : {}),
+      ...(grant.bonusChainId ? { bonusChainId: grant.bonusChainId } : {}),
+      ...(grant.durationMinutes === undefined ? {} : { durationMinutes: grant.durationMinutes }),
+      ...(outcome === undefined ? {} : { outcome }),
+      ...(closedAt === undefined ? {} : { closedAt }),
+      ...(grant.endedAt ? { endedAt: grant.endedAt } : {}),
+      ...(grant.endedEarlyAt ? { endedEarlyAt: grant.endedEarlyAt } : {}),
+    };
+  });
 
 const normalizeSettings = (value: unknown, fallback: UserSettings): UserSettings => {
   const settings = isRecord(value) ? value : {};
@@ -451,7 +519,7 @@ export const migratePersistedAppState = (
     tokens: arrayOrFallback<Token>(state.tokens, initialState.tokens),
     jars: normalizeJars(state.jars, initialState.jars),
     rewards: arrayOrFallback<Reward>(state.rewards, initialState.rewards),
-    rewardGrants: arrayOrFallback<RewardGrant>(state.rewardGrants, initialState.rewardGrants),
+    rewardGrants: normalizeRewardGrants(state.rewardGrants, initialState.rewardGrants),
     spinResults: arrayOrFallback<SpinResult>(state.spinResults, initialState.spinResults),
     pendingSpin: state.pendingSpin as PendingSpinContext | undefined,
     bonusChains: arrayOrFallback<BonusChain>(state.bonusChains, initialState.bonusChains),
@@ -1177,6 +1245,7 @@ export const useAppStore = create<AppStore>()(
 
         const resolvedSpin: ResolvedSpin = resolveSpin({
           activatedMaxTier,
+          forceStarterReward: state.rewardGrants.length === 0 && state.spinResults.length === 0,
           ...(seed === undefined ? {} : { seed }),
         });
         const pendingSpin: PendingSpinContext = {
@@ -1621,12 +1690,12 @@ export const useAppStore = create<AppStore>()(
           activeRewardSession: undefined,
           currentState: 'IDLE',
           rewardGrants: state.rewardGrants.map((grant) =>
-            grant.id === activeRewardSession.rewardGrantId && grant.endedAt === undefined
-              ? {
-                  ...grant,
-                  endedAt,
-                }
-              : grant,
+            closeRewardGrant({
+              closedAt: endedAt,
+              grant,
+              outcome: 'completed',
+              rewardGrantId: activeRewardSession.rewardGrantId,
+            }),
           ),
         }));
       },
@@ -1642,12 +1711,33 @@ export const useAppStore = create<AppStore>()(
           activeRewardSession: undefined,
           currentState: 'IDLE',
           rewardGrants: state.rewardGrants.map((grant) =>
-            grant.id === activeRewardSession.rewardGrantId && grant.endedEarlyAt === undefined
-              ? {
-                  ...grant,
-                  endedEarlyAt,
-                }
-              : grant,
+            closeRewardGrant({
+              closedAt: endedEarlyAt,
+              grant,
+              outcome: 'stopped',
+              rewardGrantId: activeRewardSession.rewardGrantId,
+            }),
+          ),
+        }));
+      },
+
+      recordRewardBoundarySlip: (slippedAt = nowIso()) => {
+        const activeRewardSession = get().activeRewardSession;
+
+        if (!activeRewardSession) {
+          return;
+        }
+
+        set((state) => ({
+          activeRewardSession: undefined,
+          currentState: 'IDLE',
+          rewardGrants: state.rewardGrants.map((grant) =>
+            closeRewardGrant({
+              closedAt: slippedAt,
+              grant,
+              outcome: 'slipped',
+              rewardGrantId: activeRewardSession.rewardGrantId,
+            }),
           ),
         }));
       },
@@ -1660,7 +1750,18 @@ export const useAppStore = create<AppStore>()(
         }
 
         if (activeRewardSession.expiresAt.localeCompare(timestamp) <= 0) {
-          get().endActiveRewardSession(timestamp);
+          set((state) => ({
+            activeRewardSession: undefined,
+            currentState: 'IDLE',
+            rewardGrants: state.rewardGrants.map((grant) =>
+              closeRewardGrant({
+                closedAt: timestamp,
+                grant,
+                outcome: 'expired',
+                rewardGrantId: activeRewardSession.rewardGrantId,
+              }),
+            ),
+          }));
         }
       },
 

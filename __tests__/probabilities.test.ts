@@ -91,4 +91,17 @@ describe('resolveSpin', () => {
       }
     }
   });
+
+  it('can force the starter spin away from bonus into a Tier 1 reward', () => {
+    const seed = findSeedForSlice('bonus');
+    const result = resolveSpin({
+      activatedMaxTier: 1,
+      forceStarterReward: true,
+      seed,
+    });
+
+    expect(result.rawLandedSlice).toBe('tier1');
+    expect(result.awardedTier).toBe(1);
+    expect(result.wasNearMiss).toBe(false);
+  });
 });

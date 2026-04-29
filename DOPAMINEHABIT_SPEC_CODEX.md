@@ -54,6 +54,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 ### Cash-In and Spin
 
 - No selected tokens activates Tier 1.
+- The first eligible spin must resolve into a starter reward path rather than a bonus detour.
 - A single gold token activates Tier 3.
 - Two matching non-gold tokens activate Tier 2.
 - Three matching non-gold tokens activate Tier 3.
@@ -70,9 +71,9 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Rewards can be created, edited, archived, and restored.
 - Common reward templates can quick-add starter tiers, but created rewards behave like normal editable rewards.
 - Reward grants are append-only.
-- Active reward sessions block new spins until ended, completed, or expired.
-- Reward history should explain what was earned, when, and why.
-- Active reward screens should help users protect the granted session, mark it complete, or end it early.
+- Active reward sessions block new spins until completed, stopped cleanly, logged as a slip, or expired.
+- Reward history should explain what was earned, when, why, and how the session closed.
+- Active reward screens should help users protect the granted session, mark it complete, stop clean, or log a boundary slip.
 
 ### Bonus Rounds
 
@@ -88,6 +89,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Users can answer once per local day.
 - Skipped days reset the honesty streak.
 - Partial or no answers count as honest admissions without shame-heavy copy.
+- Check-in UI should frame missed days, partial slips, and no answers as repair signals rather than compliance failures.
 - Clock drift warnings should be visible without blocking the loop.
 - Reminder scheduling should respect the check-in time where platform support allows.
 - Users should be able to enable or disable a gentle daily check-in reminder from Settings.

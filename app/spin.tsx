@@ -87,6 +87,7 @@ export default function SpinScreen() {
   const activeReward = activeGrant
     ? rewards.find((reward) => reward.id === activeGrant.rewardId)
     : undefined;
+  const isBeforeFirstReward = rewardGrants.length === 0;
   const firstSpinChecklist = buildFirstSpinChecklist({
     hasRepReady: Boolean(latestCompletion),
     hasPendingSpin: Boolean(pendingSpin),
@@ -179,8 +180,9 @@ export default function SpinScreen() {
       <Card>
         <Text variant="display">Spin</Text>
         <Text muted>
-          Spin with no selected tokens for the first reward. Save non-gold tokens until they make
-          a matching set.
+          {isBeforeFirstReward
+            ? 'First spin: leave tokens unselected and earn the starter reward.'
+            : 'Spin now, or save matching tokens to activate higher tiers.'}
         </Text>
         <Text muted>Locked Tier 2 or Tier 3 landings visibly fall through to Tier 1.</Text>
       </Card>
@@ -208,9 +210,11 @@ export default function SpinScreen() {
       {activeRewardSession && activeReward ? (
         <Card>
           <Text variant="title">Reward active: {activeReward.name}</Text>
-          <Text muted>Finish or end the active reward before spinning again.</Text>
+          <Text muted>
+            Finish it, stop clean, or log a boundary slip before the next spin.
+          </Text>
           <Button
-            label="Open active reward"
+            label="Open reward boundary"
             onPress={() =>
               router.push({
                 pathname: '/reward/[id]',
@@ -227,15 +231,26 @@ export default function SpinScreen() {
         </Card>
       ) : null}
       <Card>
-        <CashInPanel
-          inventoryTokens={inventoryTokens}
-          selectedTokens={selectedTokens}
-          activatedMaxTier={cashIn.activatedMaxTier}
-          isValid={cashIn.isValid}
-          reason={cashIn.reason}
-          onToggleToken={toggleToken}
-          onClear={() => setSelectedTokenIds([])}
-        />
+        {isBeforeFirstReward ? (
+          <>
+            <Text variant="title">First reward path</Text>
+            <Text muted>
+              No cash-in needed yet. Keep the token you just earned; matching-token strategy
+              unlocks after the first reward.
+            </Text>
+            <Text muted>Tier 1 is active for this starter spin.</Text>
+          </>
+        ) : (
+          <CashInPanel
+            inventoryTokens={inventoryTokens}
+            selectedTokens={selectedTokens}
+            activatedMaxTier={cashIn.activatedMaxTier}
+            isValid={cashIn.isValid}
+            reason={cashIn.reason}
+            onToggleToken={toggleToken}
+            onClear={() => setSelectedTokenIds([])}
+          />
+        )}
       </Card>
       <Wheel
         activeTier={cashIn.activatedMaxTier}

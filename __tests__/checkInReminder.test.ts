@@ -49,8 +49,9 @@ describe('check-in reminder guidance', () => {
     });
 
     expect(copy).toMatchObject({
-      title: 'No shame, just signal',
-      message: 'A missed check-in means the ritual needs help. Answer today and restart clean.',
+      title: 'Missed day, usable signal',
+      message:
+        'No shame loop here. Answer today, then make the next reward boundary easier to protect.',
     });
 
     expect(
@@ -67,6 +68,6 @@ describe('check-in reminder guidance', () => {
         missedYesterday: false,
         warningMessages: [],
       }).message,
-    ).toContain('data, not a verdict');
+    ).toContain('useful data, not a verdict');
   });
 });

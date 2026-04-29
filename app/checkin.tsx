@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 
 import { buildIntegrityRecoveryCopy } from '@/game/checkInReminder';
 import { buildIntegrityDisplayInputs } from '@/game/integrity';
@@ -10,17 +10,18 @@ import { useAppStore } from '@/store';
 import type { IntegrityCheckIn } from '@/store/types';
 import { colors } from '@/theme/colors';
 import { toLocalDateKey } from '@/utils/date';
+import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const answerLabel = (answer: IntegrityCheckIn['answer']): string => {
   if (answer === 'yes') {
-    return 'Kept the rule';
+    return 'Boundary held';
   }
 
   if (answer === 'partially') {
-    return 'Partially';
+    return 'Partial slip';
   }
 
-  return 'Did not keep it';
+  return 'Boundary broke';
 };
 
 const yesterdayKey = (): string => {
@@ -55,9 +56,9 @@ export default function IntegrityCheckInScreen() {
   return (
     <Screen>
       <Card>
-        <Text variant="display">Integrity</Text>
+        <Text variant="display">Repair check-in</Text>
         <Text muted>
-          Integrity is the daily no-shame audit of whether the reward gate stayed honest.
+          A daily no-shame repair ritual for checking whether the reward boundary held.
         </Text>
         <Text muted>Daily check-in time: {integrityCheckInTime}</Text>
       </Card>
@@ -67,35 +68,46 @@ export default function IntegrityCheckInScreen() {
         <Text>{recoveryCopy.title}</Text>
         <Text muted>{recoveryCopy.message}</Text>
         {display.todayCheckIn ? (
-          <Text muted>Checked in: {answerLabel(display.todayCheckIn.answer)}</Text>
+          <>
+            <Text muted>Checked in: {answerLabel(display.todayCheckIn.answer)}</Text>
+            <Button
+              label="Return to today's loop"
+              tone="secondary"
+              onPress={() => router.replace('/')}
+            />
+          </>
         ) : (
           <>
-            <Text muted>Answer once for today.</Text>
-            <Button label="Yes" onPress={() => answerIntegrityCheckIn('yes')} />
+            <Text muted>Did the reward boundary hold today?</Text>
+            <Button label="Held" onPress={() => answerIntegrityCheckIn('yes')} />
             <Button
-              label="Partially"
+              label="Partly slipped"
               tone="secondary"
               onPress={() => answerIntegrityCheckIn('partially')}
             />
-            <Button label="No" tone="secondary" onPress={() => answerIntegrityCheckIn('no')} />
+            <Button
+              label="Boundary broke"
+              tone="secondary"
+              onPress={() => answerIntegrityCheckIn('no')}
+            />
           </>
         )}
       </Card>
 
       <Card>
-        <Text variant="title">Scoreboard</Text>
+        <Text variant="title">Repair signal</Text>
         <Text muted style={{ fontVariant: ['tabular-nums'] }}>
-          Honesty streak: {integrityRuntime.honestyStreak}
+          Boundary-held streak: {integrityRuntime.honestyStreak}
         </Text>
         <Text muted style={{ fontVariant: ['tabular-nums'] }}>
-          Honest admissions: {integrityRuntime.honestAdmissionCount}
+          Repair signals logged: {integrityRuntime.honestAdmissionCount}
         </Text>
       </Card>
 
       {display.warningMessages.length > 0 ? (
         <Card>
           <Text variant="title" style={{ color: colors.warning }}>
-            Watch items
+            Gentle flags
           </Text>
           {display.warningMessages.map((warning, index) => (
             <Text key={`${warning}-${index}`} muted>
@@ -112,7 +124,7 @@ export default function IntegrityCheckInScreen() {
           <Card key={checkIn.id}>
             <Text variant="title">{checkIn.date}</Text>
             <Text muted>{answerLabel(checkIn.answer)}</Text>
-            <Text muted>{checkIn.answeredAt}</Text>
+            <Text muted>{formatLocalDateTime(checkIn.answeredAt)}</Text>
           </Card>
         ))}
       </Card>

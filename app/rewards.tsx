@@ -9,7 +9,9 @@ import { Text } from '@/components/ui/Text';
 import { quickRewardTemplates } from '@/game/firstLoopGuidance';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
+import type { RewardGrant } from '@/store/types';
 import { spacing } from '@/theme/spacing';
+import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const formatRemaining = (remainingMs: number): string => {
   const totalSeconds = Math.ceil(remainingMs / 1000);
@@ -17,6 +19,43 @@ const formatRemaining = (remainingMs: number): string => {
   const seconds = totalSeconds % 60;
 
   return `${minutes}:${`${seconds}`.padStart(2, '0')}`;
+};
+
+const grantOutcome = (
+  grant: RewardGrant,
+): RewardGrant['outcome'] | 'in_progress' => {
+  if (grant.outcome) {
+    return grant.outcome;
+  }
+
+  if (grant.endedEarlyAt) {
+    return 'stopped';
+  }
+
+  if (grant.endedAt) {
+    return 'completed';
+  }
+
+  return 'in_progress';
+};
+
+const grantStatusLabel = (grant: RewardGrant): string => {
+  const closedAt = grant.closedAt ?? grant.endedAt ?? grant.endedEarlyAt;
+
+  switch (grantOutcome(grant)) {
+    case 'completed':
+      return `Completed ${formatLocalDateTime(closedAt)}`;
+    case 'stopped':
+      return `Stopped clean ${formatLocalDateTime(closedAt)}`;
+    case 'slipped':
+      return `Boundary slip logged ${formatLocalDateTime(closedAt)}`;
+    case 'expired':
+      return `Expired ${formatLocalDateTime(closedAt)}`;
+    case 'in_progress':
+      return 'In progress';
+  }
+
+  return 'In progress';
 };
 
 export default function RewardsScreen() {
@@ -29,6 +68,7 @@ export default function RewardsScreen() {
   const restoreReward = useAppStore((state) => state.restoreReward);
   const endActiveRewardSession = useAppStore((state) => state.endActiveRewardSession);
   const endRewardSessionEarly = useAppStore((state) => state.endRewardSessionEarly);
+  const recordRewardBoundarySlip = useAppStore((state) => state.recordRewardBoundarySlip);
   const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   const [editingRewardId, setEditingRewardId] = useState<string | undefined>(undefined);
   const remainingMs = useTimer(activeRewardSession?.expiresAt);
@@ -59,13 +99,18 @@ export default function RewardsScreen() {
         <Card>
           <Text variant="title">Active now: {activeReward.name}</Text>
           <Text muted>Time left: {formatRemaining(remainingMs)}</Text>
-          <Text muted>Expires at: {activeRewardSession.expiresAt}</Text>
+          <Text muted>Ends around {formatLocalDateTime(activeRewardSession.expiresAt)}</Text>
           <Button
-            label="End early"
+            label="Stop clean"
             tone="secondary"
             onPress={() => endRewardSessionEarly()}
           />
           <Button label="Mark complete now" tone="secondary" onPress={() => endActiveRewardSession()} />
+          <Button
+            label="Log boundary slip"
+            tone="secondary"
+            onPress={() => recordRewardBoundarySlip()}
+          />
         </Card>
       ) : (
         <Card>
@@ -160,7 +205,7 @@ export default function RewardsScreen() {
       {archivedRewards.map((reward) => (
         <Card key={reward.id}>
           <Text variant="title">{reward.name}</Text>
-          <Text muted>Archived at {reward.archivedAt}</Text>
+          <Text muted>Archived {formatLocalDateTime(reward.archivedAt)}</Text>
           <Button label="Restore" tone="secondary" onPress={() => restoreReward(reward.id)} />
         </Card>
       ))}
@@ -170,16 +215,12 @@ export default function RewardsScreen() {
         {sortedGrants.length === 0 ? <Text muted>No grants yet.</Text> : null}
         {sortedGrants.map((grant) => {
           const reward = rewards.find((candidate) => candidate.id === grant.rewardId);
-          const status = grant.endedEarlyAt
-            ? `Ended early at ${grant.endedEarlyAt}`
-            : grant.endedAt
-              ? `Completed at ${grant.endedAt}`
-              : 'In progress';
+          const status = grantStatusLabel(grant);
 
           return (
             <Card key={grant.id}>
               <Text variant="title">{reward?.name ?? 'Deleted reward reference'}</Text>
-              <Text muted>Granted at {grant.grantedAt}</Text>
+              <Text muted>Granted {formatLocalDateTime(grant.grantedAt)}</Text>
               <Text muted>{status}</Text>
             </Card>
           );

@@ -166,5 +166,77 @@ describe('app state machine', () => {
     expect(useAppStore.getState().activeRewardSession).toBeUndefined();
     expect(useAppStore.getState().currentState).toBe('IDLE');
     expect(useAppStore.getState().rewardGrants[0]?.endedAt).toBe('2026-04-23T12:10:01Z');
+    expect(useAppStore.getState().rewardGrants[0]?.closedAt).toBe('2026-04-23T12:10:01Z');
+    expect(useAppStore.getState().rewardGrants[0]?.outcome).toBe('expired');
+  });
+
+  it('distinguishes completed, stopped, and slipped reward boundaries', () => {
+    useAppStore.setState({
+      rewardGrants: [
+        {
+          id: 'grant-complete',
+          rewardId: 'reward-1',
+          grantedAt: '2026-04-23T12:00:00Z',
+          source: 'spin',
+          durationMinutes: 10,
+        },
+        {
+          id: 'grant-stop',
+          rewardId: 'reward-1',
+          grantedAt: '2026-04-23T13:00:00Z',
+          source: 'spin',
+          durationMinutes: 10,
+        },
+        {
+          id: 'grant-slip',
+          rewardId: 'reward-1',
+          grantedAt: '2026-04-23T14:00:00Z',
+          source: 'spin',
+          durationMinutes: 10,
+        },
+      ],
+    });
+
+    useAppStore.getState().setActiveRewardSession({
+      rewardGrantId: 'grant-complete',
+      expiresAt: '2026-04-23T12:10:00Z',
+    });
+    useAppStore.getState().endActiveRewardSession('2026-04-23T12:05:00Z');
+
+    useAppStore.getState().setActiveRewardSession({
+      rewardGrantId: 'grant-stop',
+      expiresAt: '2026-04-23T13:10:00Z',
+    });
+    useAppStore.getState().endRewardSessionEarly('2026-04-23T13:05:00Z');
+
+    useAppStore.getState().setActiveRewardSession({
+      rewardGrantId: 'grant-slip',
+      expiresAt: '2026-04-23T14:10:00Z',
+    });
+    useAppStore.getState().recordRewardBoundarySlip('2026-04-23T14:05:00Z');
+
+    expect(useAppStore.getState().rewardGrants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'grant-complete',
+          outcome: 'completed',
+          closedAt: '2026-04-23T12:05:00Z',
+          endedAt: '2026-04-23T12:05:00Z',
+        }),
+        expect.objectContaining({
+          id: 'grant-stop',
+          outcome: 'stopped',
+          closedAt: '2026-04-23T13:05:00Z',
+          endedEarlyAt: '2026-04-23T13:05:00Z',
+        }),
+        expect.objectContaining({
+          id: 'grant-slip',
+          outcome: 'slipped',
+          closedAt: '2026-04-23T14:05:00Z',
+          endedEarlyAt: '2026-04-23T14:05:00Z',
+        }),
+      ]),
+    );
+    expect(useAppStore.getState().activeRewardSession).toBeUndefined();
   });
 });

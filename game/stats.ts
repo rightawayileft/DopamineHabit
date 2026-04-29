@@ -272,7 +272,7 @@ export const buildStatsSummary = ({
   } else if (activeRewardSession) {
     nextAction = {
       title: 'Use the active reward',
-      message: 'A reward session is already active. Finish or end it before spinning again.',
+      message: 'A reward session is active. Complete it, stop clean, or log a slip before spinning.',
       route: '/rewards',
       label: 'Open rewards',
     };

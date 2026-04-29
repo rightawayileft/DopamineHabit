@@ -109,34 +109,34 @@ export const buildIntegrityRecoveryCopy = (
 ): { title: string; message: string } => {
   if (display.todayCheckIn?.answer === 'yes') {
     return {
-      title: 'Today is sealed',
-      message: 'Nice. The loop stays clean when the check-in is honest and simple.',
+      title: 'Boundary held',
+      message: 'Nice. The reward gate did its job today, and the next loop can stay simple.',
     };
   }
 
   if (display.todayCheckIn?.answer === 'partially') {
     return {
-      title: 'Truth kept the streak useful',
-      message: 'A partial slip is data, not a verdict. Reset the gate and keep going.',
+      title: 'Partial slip logged',
+      message: 'That is useful data, not a verdict. Tighten the boundary and keep the next rep tiny.',
     };
   }
 
   if (display.todayCheckIn?.answer === 'no') {
     return {
-      title: 'Reset without drama',
-      message: 'You logged the miss. That honesty is what keeps the app trustworthy.',
+      title: 'Repair starts here',
+      message: 'You logged the boundary break. The app trusts the signal and clears the way back.',
     };
   }
 
   if (display.missedYesterday) {
     return {
-      title: 'No shame, just signal',
-      message: 'A missed check-in means the ritual needs help. Answer today and restart clean.',
+      title: 'Missed day, usable signal',
+      message: 'No shame loop here. Answer today, then make the next reward boundary easier to protect.',
     };
   }
 
   return {
-    title: 'A thirty-second audit',
-    message: 'Answer once today. The goal is truth, not perfection.',
+    title: 'A thirty-second repair ritual',
+    message: 'Answer once today. The goal is a trustworthy boundary, not a perfect record.',
   };
 };

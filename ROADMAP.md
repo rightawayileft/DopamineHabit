@@ -38,24 +38,24 @@ This file is the current handoff map for local and cloud work. The product behav
 - Six-agent product audit: completed all six UX/product audit personas and synthesized prioritized findings in `docs/six-agent-product-audit-2026-04-28.md`.
 - PR17 first reward path delight: simplified first-run copy around one tiny rep, moved Home expansion controls below the rep action, added token-feedback-to-spin handoff, demoted integrity prompts until after a reward loop, clarified invalid one-token cash-ins, and added reward start/complete next actions.
 - PR18 fast first-loop onboarding: added starter loop bundles, visual loop progress, live gate preview, clearer teach-by-doing setup copy, softened check-in setup, a focused launch pad, first-run Home rep hero, and token reveal styling.
+- PR19 recovery language and reward boundary support: guaranteed the first eligible spin stays on a starter reward path, added explicit completed/stopped/slipped/expired reward grant outcomes with migration support, made reward and check-in times human-readable, reframed check-ins as repair signals, and added clear next actions after boundary events.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR19 should focus on recovery language and reward boundary support.
+PR20 should fold in a focused bugcheck and trust polish pass.
 
 Recommended scope:
 
-- Add no-shame missed-day repair language where integrity and streak messaging could feel punitive.
-- Add active reward stopped/slipped states so ending early can distinguish clean stops from boundary breaks.
-- Make reward and integrity times consistently human-readable.
-- Clarify what to do when a user uses the reward outside an app-granted session.
-- Keep the next action obvious after recovery events.
+- Run the local agentic bugcheck against first-loop, recovery, backup/restore, reduced-motion, and management flows.
+- Add a Data Status card for persistence/version/export visibility.
+- Add safer backup/restore preflight and clearer import confirmation.
+- Add confirmation or undo for high-impact archive/reset/reward-closure actions.
+- Strengthen reduced-motion spin result focus and gate-strength explanations.
 
 ## Later Checkpoints
 
-- PR19 recovery language and reward boundary support: no-shame copy pass, missed-day repair workflow, active reward stopped/slipped states, human-readable times.
 - PR20 trust and safety polish: Data Status card, safer backup/restore, gate-strength explanation, reduced-motion result focus, and undo/confirm for high-impact actions.
 - PR21 trust ledgers: token history split from inventory, reward grant why history, recent reward status on Stats.
 - PR22 mature management polish: compact/searchable management, scoped Stats filters, milestone/fun-money ledgers, consistent selected controls.

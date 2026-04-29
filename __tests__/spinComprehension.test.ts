@@ -58,6 +58,16 @@ describe('spin comprehension', () => {
       buildSpinDisabledReason({
         hasRepReady: true,
         hasPendingSpin: false,
+        hasActiveReward: true,
+        isAnimating: false,
+        isCashInValid: true,
+      }),
+    ).toBe('Close the active reward boundary before spinning again.');
+
+    expect(
+      buildSpinDisabledReason({
+        hasRepReady: true,
+        hasPendingSpin: false,
         hasActiveReward: false,
         isAnimating: false,
         isCashInValid: false,
@@ -137,10 +147,11 @@ describe('spin comprehension', () => {
     expect(details).toMatchObject({
       title: 'Active reward: Chess puzzle',
       lines: expect.arrayContaining([
-        'Granted from spin.',
+        'You earned this from the wheel.',
         'Session length: 10 min.',
         'Closes around 2026-04-27T13:10:00Z.',
         'Protect this session: use only the granted reward, then mark it complete.',
+        'Stop clean if you quit early. Log a slip if the reward escaped the boundary.',
       ]),
     });
   });
