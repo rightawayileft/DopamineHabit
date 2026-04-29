@@ -156,6 +156,16 @@ describe('stats summary', () => {
       spinCount: 1,
       rewardGrantCount: 1,
       completedRewardGrantCount: 1,
+      recentRewardStatuses: [
+        expect.objectContaining({
+          id: 'grant-1',
+          name: 'Phone game',
+          status: 'completed',
+          source: 'spin',
+          tier: 1,
+          durationMinutes: 3,
+        }),
+      ],
       unlockedMilestoneCount: 1,
       totalMilestoneCount: 1,
       funMoneyBalanceCents: 150,
@@ -170,6 +180,54 @@ describe('stats summary', () => {
 
   it('formats fun money balances', () => {
     expect(formatCents(150)).toBe('$1.50');
+  });
+
+  it('uses reward grant snapshots for recent reward history', () => {
+    const summary = buildStatsSummary({
+      habits: [],
+      jars: [],
+      rewards: [
+        {
+          id: 'reward-1',
+          name: 'Renamed reward',
+          tier: 3,
+          durationMinutes: 30,
+        },
+      ],
+      completions: [],
+      tokens: [],
+      spinResults: [],
+      rewardGrants: [
+        {
+          id: 'grant-1',
+          rewardId: 'reward-1',
+          rewardSnapshot: {
+            name: 'Original reward',
+            tier: 2,
+            durationMinutes: 15,
+          },
+          grantedAt: '2026-04-27T12:00:00Z',
+          source: 'bonus',
+          outcome: 'slipped',
+          closedAt: '2026-04-27T12:12:00Z',
+        },
+      ],
+      activeRewardSession: undefined,
+      integrityCheckIns: [],
+      integrityRuntime,
+      todayKey: '2026-04-27',
+    });
+
+    expect(summary.recentRewardStatuses).toEqual([
+      expect.objectContaining({
+        name: 'Original reward',
+        status: 'slipped',
+        source: 'bonus',
+        tier: 2,
+        durationMinutes: 15,
+        closedAt: '2026-04-27T12:12:00Z',
+      }),
+    ]);
   });
 
   it('builds a filtered progress dashboard with coaching cards', () => {

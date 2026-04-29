@@ -38,6 +38,7 @@ import type {
   Reward,
   RewardGrant,
   RewardGrantOutcome,
+  RewardGrantSnapshot,
   SpinResult,
   Token,
   UserSettings,
@@ -218,7 +219,7 @@ interface PersistedEnvelope {
   version: number;
 }
 
-export const APP_STORE_PERSIST_VERSION = 3;
+export const APP_STORE_PERSIST_VERSION = 4;
 
 export interface ImportLocalDataResult {
   status: 'imported' | 'failed';
@@ -453,17 +454,73 @@ const inferRewardGrantOutcome = (
   return undefined;
 };
 
+const isRewardTier = (value: unknown): value is Reward['tier'] =>
+  value === 1 || value === 2 || value === 3 || value === 'jackpot';
+
+const rewardGrantSnapshotFor = (reward: Reward): RewardGrantSnapshot => ({
+  name: reward.name,
+  tier: reward.tier,
+  ...(reward.durationMinutes === undefined ? {} : { durationMinutes: reward.durationMinutes }),
+});
+
+const normalizeRewardGrantSnapshot = (
+  value: unknown,
+): RewardGrantSnapshot | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const name = optionalString(value.name);
+  const tier = value.tier;
+
+  if (!name || !isRewardTier(tier)) {
+    return undefined;
+  }
+
+  return {
+    name,
+    tier,
+    ...(typeof value.durationMinutes === 'number'
+      ? { durationMinutes: value.durationMinutes }
+      : {}),
+  };
+};
+
+const rewardGrantSnapshotForId = (
+  rewardId: UUID | undefined,
+  rewards: Reward[],
+): RewardGrantSnapshot | undefined => {
+  const reward = rewards.find((candidate) => candidate.id === rewardId);
+
+  return reward ? rewardGrantSnapshotFor(reward) : undefined;
+};
+
+const rewardGrantWithSnapshot = (grant: RewardGrant, rewards: Reward[]): RewardGrant => {
+  if (grant.rewardSnapshot) {
+    return grant;
+  }
+
+  const rewardSnapshot = rewardGrantSnapshotForId(grant.rewardId, rewards);
+
+  return rewardSnapshot ? { ...grant, rewardSnapshot } : grant;
+};
+
 const normalizeRewardGrants = (
   value: unknown,
   fallback: RewardGrant[],
+  rewards: Reward[],
 ): RewardGrant[] =>
   arrayOrFallback<Partial<RewardGrant>>(value, fallback).map((grant) => {
     const outcome = inferRewardGrantOutcome(grant);
     const closedAt = grant.closedAt ?? grant.endedAt ?? grant.endedEarlyAt;
+    const rewardSnapshot =
+      normalizeRewardGrantSnapshot(grant.rewardSnapshot) ??
+      rewardGrantSnapshotForId(grant.rewardId, rewards);
 
     return {
       id: grant.id ?? createUuid(),
       rewardId: grant.rewardId ?? '',
+      ...(rewardSnapshot ? { rewardSnapshot } : {}),
       grantedAt: grant.grantedAt ?? nowIso(),
       source: grant.source ?? 'spin',
       ...(grant.spinResultId ? { spinResultId: grant.spinResultId } : {}),
@@ -566,7 +623,11 @@ export const migratePersistedAppState = (
   const initialState = createInitialAppState();
   const state = isRecord(persistedState) ? persistedState : {};
   const rewards = arrayOrFallback<Reward>(state.rewards, initialState.rewards);
-  const rewardGrants = normalizeRewardGrants(state.rewardGrants, initialState.rewardGrants);
+  const rewardGrants = normalizeRewardGrants(
+    state.rewardGrants,
+    initialState.rewardGrants,
+    rewards,
+  );
   const activeRewardSession = normalizeActiveRewardSession({
     rewardGrants,
     rewards,
@@ -1431,6 +1492,7 @@ export const useAppStore = create<AppStore>()(
             ? {
                 id: grantId,
                 rewardId: selection.reward.id,
+                rewardSnapshot: rewardGrantSnapshotFor(selection.reward),
                 grantedAt: spinResult.spunAt,
                 source: 'spin',
                 spinResultId: spinResult.id,
@@ -1656,6 +1718,7 @@ export const useAppStore = create<AppStore>()(
           ? {
               id: rewardGrantId,
               rewardId: rewardSelection.reward.id,
+              rewardSnapshot: rewardGrantSnapshotFor(rewardSelection.reward),
               grantedAt: completedAt,
               source: 'bonus',
               bonusChainId: activeBonusChain.id,
@@ -1789,7 +1852,7 @@ export const useAppStore = create<AppStore>()(
 
       grantReward: (grant) => {
         set((state) => ({
-          rewardGrants: [...state.rewardGrants, grant],
+          rewardGrants: [...state.rewardGrants, rewardGrantWithSnapshot(grant, state.rewards)],
         }));
       },
 

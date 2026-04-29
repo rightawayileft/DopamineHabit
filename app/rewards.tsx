@@ -11,8 +11,9 @@ import { Text } from '@/components/ui/Text';
 import { quickRewardTemplates } from '@/game/firstLoopGuidance';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
-import type { RewardGrant } from '@/store/types';
-import { spacing } from '@/theme/spacing';
+import type { Reward, RewardGrant } from '@/store/types';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const formatRemaining = (remainingMs: number): string => {
@@ -60,6 +61,27 @@ const grantStatusLabel = (grant: RewardGrant): string => {
   return 'In progress';
 };
 
+const grantRewardName = (grant: RewardGrant, reward: Reward | undefined): string =>
+  grant.rewardSnapshot?.name ?? reward?.name ?? 'Deleted reward reference';
+
+const grantRewardTier = (
+  grant: RewardGrant,
+  reward: Reward | undefined,
+): Reward['tier'] | undefined => grant.rewardSnapshot?.tier ?? reward?.tier;
+
+const grantRewardDuration = (
+  grant: RewardGrant,
+  reward: Reward | undefined,
+): number | undefined =>
+  grant.rewardSnapshot?.durationMinutes ?? grant.durationMinutes ?? reward?.durationMinutes;
+
+const rewardSourceLabel: Record<RewardGrant['source'], string> = {
+  bonus: 'Bonus chain',
+  spin: 'Wheel spin',
+};
+
+const shortRecordId = (id: string): string => (id.length > 8 ? id.slice(0, 8) : id);
+
 type RewardClosureMode = 'completed' | 'stopped' | 'slipped';
 
 const rewardClosurePrompt: Record<RewardClosureMode, string> = {
@@ -103,6 +125,8 @@ export default function RewardsScreen() {
   const activeReward = activeGrant
     ? rewards.find((reward) => reward.id === activeGrant.rewardId)
     : undefined;
+  const activeRewardName =
+    activeGrant && activeReward ? grantRewardName(activeGrant, activeReward) : undefined;
   const sortedGrants = rewardGrants
     .slice()
     .sort((left, right) => right.grantedAt.localeCompare(left.grantedAt));
@@ -110,7 +134,7 @@ export default function RewardsScreen() {
   const archivedRewards = rewards.filter((reward) => reward.archivedAt);
 
   const closeActiveReward = (mode: RewardClosureMode) => {
-    if (!activeReward) {
+    if (!activeGrant || !activeReward) {
       return;
     }
 
@@ -122,7 +146,7 @@ export default function RewardsScreen() {
       recordRewardBoundarySlip();
     }
 
-    setLastClosure({ mode, rewardName: activeReward.name });
+    setLastClosure({ mode, rewardName: grantRewardName(activeGrant, activeReward) });
     setPendingClosure(undefined);
   };
 
@@ -132,9 +156,9 @@ export default function RewardsScreen() {
         <Text variant="display">Rewards</Text>
         <Text muted>Reward grants are append-only and session expiry is authoritative.</Text>
       </Card>
-      {activeRewardSession && activeGrant && activeReward ? (
+      {activeRewardSession && activeGrant && activeReward && activeRewardName ? (
         <Card>
-          <Text variant="title">Active now: {activeReward.name}</Text>
+          <Text variant="title">Active now: {activeRewardName}</Text>
           <Text muted>Time left: {formatRemaining(remainingMs)}</Text>
           <Text muted>Ends around {formatLocalDateTime(activeRewardSession.expiresAt)}</Text>
           {pendingClosure ? (
@@ -296,13 +320,41 @@ export default function RewardsScreen() {
         {sortedGrants.map((grant) => {
           const reward = rewards.find((candidate) => candidate.id === grant.rewardId);
           const status = grantStatusLabel(grant);
+          const rewardName = grantRewardName(grant, reward);
+          const tier = grantRewardTier(grant, reward);
+          const durationMinutes = grantRewardDuration(grant, reward);
+          const currentNameChanged = Boolean(
+            grant.rewardSnapshot?.name && reward && grant.rewardSnapshot.name !== reward.name,
+          );
 
           return (
-            <Card key={grant.id}>
-              <Text variant="title">{reward?.name ?? 'Deleted reward reference'}</Text>
+            <View
+              key={grant.id}
+              style={{
+                backgroundColor: colors.surfaceElevated,
+                borderColor: colors.border,
+                borderRadius: radius.sm,
+                borderWidth: 1,
+                gap: spacing.xs,
+                padding: spacing.sm,
+              }}
+            >
+              <Text variant="title">{rewardName}</Text>
               <Text muted>Granted {formatLocalDateTime(grant.grantedAt)}</Text>
               <Text muted>{status}</Text>
-            </Card>
+              <Text muted>
+                {rewardSourceLabel[grant.source]}
+                {tier ? ` - Tier ${tier}` : ''}
+                {durationMinutes === undefined ? '' : ` - ${durationMinutes} min`}
+              </Text>
+              {grant.spinResultId ? (
+                <Text muted>Spin result: {shortRecordId(grant.spinResultId)}</Text>
+              ) : null}
+              {grant.bonusChainId ? (
+                <Text muted>Bonus chain: {shortRecordId(grant.bonusChainId)}</Text>
+              ) : null}
+              {currentNameChanged ? <Text muted>Current reward name: {reward?.name}</Text> : null}
+            </View>
           );
         })}
       </Card>

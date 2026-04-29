@@ -47,6 +47,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Jars receive tokens from linked habit completions.
 - Tokens are never deleted.
 - Token states are `in_inventory`, `cashed_in`, or `in_jar`.
+- Token history must distinguish current inventory from historical cashed-in or jar-held tokens.
 - Milestones unlock when earned token count reaches their threshold.
 - Custom milestones added below the current earned-token count should unlock immediately.
 - Optional fun-money balances accrue from earned tokens when enabled.
@@ -71,6 +72,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Rewards can be created, edited, archived, and restored.
 - Common reward templates can quick-add starter tiers, but created rewards behave like normal editable rewards.
 - Reward grants are append-only.
+- Reward grants snapshot reward name, tier, and duration at grant time so later edits do not rewrite history.
 - Active reward sessions block new spins until completed, stopped cleanly, logged as a slip, or expired.
 - Reward history should explain what was earned, when, why, and how the session closed.
 - Active reward screens should help users protect the granted session, mark it complete, stop clean, or log a boundary slip.
@@ -111,6 +113,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Stats must be useful with zero data, early data, and mature data.
 - Stats should support timeframe, jar, and habit filters for focused progress review.
 - Stats should translate raw local data into coaching cues, visible rhythm, and reward-energy signals.
+- Stats should surface recent reward statuses and closure outcomes in human-readable form.
 
 ## Persistence Invariants
 

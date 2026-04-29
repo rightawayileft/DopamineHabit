@@ -75,31 +75,33 @@ export default function RewardActiveScreen() {
   const activeReward = activeGrant
     ? rewards.find((reward) => reward.id === activeGrant.rewardId)
     : undefined;
+  const activeRewardName =
+    activeGrant && activeReward ? activeGrant.rewardSnapshot?.name ?? activeReward.name : undefined;
 
   const completeReward = () => {
-    if (!activeReward) {
+    if (!activeRewardName) {
       return;
     }
 
-    setClosedReward({ mode: 'completed', name: activeReward.name });
+    setClosedReward({ mode: 'completed', name: activeRewardName });
     endActiveRewardSession();
   };
 
   const stopRewardClean = () => {
-    if (!activeReward) {
+    if (!activeRewardName) {
       return;
     }
 
-    setClosedReward({ mode: 'stopped', name: activeReward.name });
+    setClosedReward({ mode: 'stopped', name: activeRewardName });
     endRewardSessionEarly();
   };
 
   const logBoundarySlip = () => {
-    if (!activeReward) {
+    if (!activeRewardName) {
       return;
     }
 
-    setClosedReward({ mode: 'slipped', name: activeReward.name });
+    setClosedReward({ mode: 'slipped', name: activeRewardName });
     recordRewardBoundarySlip();
   };
   const expiredGrant = rewardId
@@ -111,11 +113,14 @@ export default function RewardActiveScreen() {
   const expiredReward = expiredGrant
     ? rewards.find((reward) => reward.id === expiredGrant.rewardId)
     : undefined;
+  const expiredRewardName = expiredGrant
+    ? expiredGrant.rewardSnapshot?.name ?? expiredReward?.name
+    : undefined;
 
   if (!activeRewardSession || !activeGrant || !activeReward) {
     const recoveryState =
       closedReward ??
-      (expiredReward ? { mode: 'expired' as const, name: expiredReward.name } : undefined);
+      (expiredRewardName ? { mode: 'expired' as const, name: expiredRewardName } : undefined);
 
     if (recoveryState) {
       const copy = closedRewardCopy[recoveryState.mode];
@@ -167,7 +172,7 @@ export default function RewardActiveScreen() {
   }
 
   const sessionDetails = buildActiveRewardSessionDetails({
-    reward: activeReward,
+    reward: { ...activeReward, name: activeRewardName ?? activeReward.name },
     grant: activeGrant,
     expiresAt: formatLocalDateTime(activeRewardSession.expiresAt),
   });
@@ -175,7 +180,7 @@ export default function RewardActiveScreen() {
   return (
     <Screen>
       <Card>
-        <Text variant="display">{activeReward.name}</Text>
+        <Text variant="display">{activeRewardName ?? activeReward.name}</Text>
         <Text muted>Time remaining: {renderCountdown(remainingMs)}</Text>
         <Text muted>Ends around {formatLocalDateTime(activeRewardSession.expiresAt)}</Text>
       </Card>

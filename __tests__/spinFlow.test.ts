@@ -120,6 +120,13 @@ describe('spin flow', () => {
     expect(result?.awardedRewardId).toBeDefined();
     expect(useAppStore.getState().spinResults).toHaveLength(1);
     expect(useAppStore.getState().rewardGrants).toHaveLength(1);
+    expect(useAppStore.getState().rewardGrants[0]).toMatchObject({
+      rewardSnapshot: {
+        name: 'Clash Royale',
+        tier: 1,
+        durationMinutes: 3,
+      },
+    });
     expect(useAppStore.getState().activeRewardSession).toBeDefined();
     expect(useAppStore.getState().currentState).toBe('REWARD_ACTIVE');
   });

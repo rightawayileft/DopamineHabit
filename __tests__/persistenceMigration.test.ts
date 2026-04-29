@@ -148,6 +148,62 @@ describe('persistence migrations', () => {
     );
   });
 
+  it('hydrates legacy reward grant snapshots from reward records', () => {
+    const migrated = migratePersistedAppState(
+      {
+        rewards: [
+          {
+            id: 'reward-1',
+            name: 'Original reward',
+            tier: 2,
+            durationMinutes: 12,
+          },
+        ],
+        rewardGrants: [
+          {
+            id: 'legacy-grant',
+            rewardId: 'reward-1',
+            grantedAt: '2026-04-23T12:00:00Z',
+            source: 'spin',
+          },
+          {
+            id: 'snapshot-grant',
+            rewardId: 'reward-1',
+            rewardSnapshot: {
+              name: 'Already frozen',
+              tier: 1,
+              durationMinutes: 3,
+            },
+            grantedAt: '2026-04-23T13:00:00Z',
+            source: 'bonus',
+          },
+        ],
+      },
+      3,
+    );
+
+    expect(migrated.rewardGrants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'legacy-grant',
+          rewardSnapshot: {
+            name: 'Original reward',
+            tier: 2,
+            durationMinutes: 12,
+          },
+        }),
+        expect.objectContaining({
+          id: 'snapshot-grant',
+          rewardSnapshot: {
+            name: 'Already frozen',
+            tier: 1,
+            durationMinutes: 3,
+          },
+        }),
+      ]),
+    );
+  });
+
   it('exports, imports, and resets local data through store actions', () => {
     useAppStore.getState().acceptNakedRule('2026-04-23T12:00:00Z');
     const exported = useAppStore.getState().exportLocalData();

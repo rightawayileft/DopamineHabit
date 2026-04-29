@@ -40,23 +40,23 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR18 fast first-loop onboarding: added starter loop bundles, visual loop progress, live gate preview, clearer teach-by-doing setup copy, softened check-in setup, a focused launch pad, first-run Home rep hero, and token reveal styling.
 - PR19 recovery language and reward boundary support: guaranteed the first eligible spin stays on a starter reward path, added explicit completed/stopped/slipped/expired reward grant outcomes with migration support, made reward and check-in times human-readable, reframed check-ins as repair signals, and added clear next actions after boundary events.
 - PR20 trust and safety polish: ran agentic bugcheck personas, added Settings Data Status and import preview/confirmation, exposed persistence backend warnings, rejected raw JSON imports, repaired orphan/expired active reward sessions, confirmed reward/archive closures, protected first-rep handoff, and clarified reduced-motion/reward timer feedback.
+- PR21 trust ledgers and richer history: split jar token history from current inventory, added reward grant snapshots for historical name/tier/duration display, expanded reward grant why/closure rows, and surfaced recent reward statuses on Stats.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR21 should add trust ledgers and richer history.
+PR22 should polish mature management and ledgers.
 
 Recommended scope:
 
-- Split token history from token inventory so users can audit where tokens went.
-- Add reward grant why/history details, including source, tier, duration, and closure outcome.
-- Surface recent reward status and closure outcomes on Stats.
-- Preserve historical reward labels where customization could make old grants confusing.
+- Add compact/searchable management views for mature setups with many habits, jars, and rewards.
+- Add scoped Stats filters that remain readable with larger data sets.
+- Expand milestone and fun-money ledgers so balance/progress changes are auditable.
+- Make selected controls and active filters visually consistent across Spin, Stats, and management.
 
 ## Later Checkpoints
 
-- PR21 trust ledgers: token history split from inventory, reward grant why history, recent reward status on Stats.
 - PR22 mature management polish: compact/searchable management, scoped Stats filters, milestone/fun-money ledgers, consistent selected controls.
 - Native readiness: EAS build profiles, app icons/splash polish, notification permissions, and store metadata.
 

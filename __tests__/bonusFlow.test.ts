@@ -209,6 +209,11 @@ describe('bonus flow', () => {
         id: 'bonus-grant-1',
         source: 'bonus',
         bonusChainId: 'bonus-chain-1',
+        rewardSnapshot: {
+          name: 'Clash Royale',
+          tier: 1,
+          durationMinutes: 3,
+        },
       }),
     );
     expect(useAppStore.getState().activeRewardSession?.rewardGrantId).toBe('bonus-grant-1');

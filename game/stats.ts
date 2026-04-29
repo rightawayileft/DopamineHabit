@@ -7,6 +7,7 @@ import type {
   Jar,
   Reward,
   RewardGrant,
+  RewardGrantOutcome,
   SpinResult,
   Token,
   TokenColor,
@@ -44,6 +45,18 @@ export interface StatsSummary {
   honestyStreak: number;
   honestAdmissionCount: number;
   nextAction: NextAction;
+  recentRewardStatuses: RecentRewardStatus[];
+}
+
+export interface RecentRewardStatus {
+  id: string;
+  name: string;
+  status: RewardGrantOutcome | 'in_progress';
+  source: RewardGrant['source'];
+  tier: Reward['tier'] | 'unknown';
+  durationMinutes?: number;
+  grantedAt: string;
+  closedAt?: string;
 }
 
 export interface StatsFilters {
@@ -216,6 +229,48 @@ const countSpinOutcomes = (spinResults: SpinResult[]): CountBucket[] => {
     .sort((left, right) => right.count - left.count);
 };
 
+const rewardGrantStatus = (grant: RewardGrant): RewardGrantOutcome | 'in_progress' => {
+  if (grant.outcome) {
+    return grant.outcome;
+  }
+
+  if (grant.endedEarlyAt) {
+    return 'stopped';
+  }
+
+  if (grant.endedAt) {
+    return 'completed';
+  }
+
+  return 'in_progress';
+};
+
+const buildRecentRewardStatuses = (
+  rewardGrants: RewardGrant[],
+  rewards: Reward[],
+): RecentRewardStatus[] =>
+  rewardGrants
+    .slice()
+    .sort((left, right) => right.grantedAt.localeCompare(left.grantedAt))
+    .slice(0, 3)
+    .map((grant) => {
+      const reward = rewards.find((candidate) => candidate.id === grant.rewardId);
+      const closedAt = grant.closedAt ?? grant.endedAt ?? grant.endedEarlyAt;
+      const durationMinutes =
+        grant.rewardSnapshot?.durationMinutes ?? grant.durationMinutes ?? reward?.durationMinutes;
+
+      return {
+        id: grant.id,
+        name: grant.rewardSnapshot?.name ?? reward?.name ?? 'Deleted reward reference',
+        status: rewardGrantStatus(grant),
+        source: grant.source,
+        tier: grant.rewardSnapshot?.tier ?? reward?.tier ?? 'unknown',
+        ...(durationMinutes === undefined ? {} : { durationMinutes }),
+        grantedAt: grant.grantedAt,
+        ...(closedAt === undefined ? {} : { closedAt }),
+      };
+    });
+
 export const buildStatsSummary = ({
   habits,
   jars,
@@ -327,6 +382,7 @@ export const buildStatsSummary = ({
     honestyStreak: integrityRuntime.honestyStreak,
     honestAdmissionCount: integrityRuntime.honestAdmissionCount,
     nextAction,
+    recentRewardStatuses: buildRecentRewardStatuses(rewardGrants, rewards),
   };
 };
 

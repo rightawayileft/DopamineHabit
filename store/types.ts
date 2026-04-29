@@ -36,6 +36,12 @@ export interface Reward {
   archivedAt?: ISODate;
 }
 
+export interface RewardGrantSnapshot {
+  name: string;
+  tier: Reward['tier'];
+  durationMinutes?: number;
+}
+
 export interface Token {
   id: UUID;
   color: TokenColor;
@@ -81,6 +87,7 @@ export interface SpinResult {
 export interface RewardGrant {
   id: UUID;
   rewardId: UUID;
+  rewardSnapshot?: RewardGrantSnapshot;
   grantedAt: ISODate;
   source: 'spin' | 'bonus';
   spinResultId?: UUID;

@@ -10,11 +10,13 @@ import {
   buildProgressDashboard,
   buildStatsSummary,
   formatCents,
+  type RecentRewardStatus,
   type StatsTimeframe,
 } from '@/game/stats';
 import { useAppStore } from '@/store';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { formatLocalDateTime } from '@/utils/dateDisplay';
 
 const timeframes: { id: StatsTimeframe; label: string }[] = [
   { id: '7d', label: '7 days' },
@@ -24,6 +26,22 @@ const timeframes: { id: StatsTimeframe; label: string }[] = [
 
 const tokenColor = (label: string): string =>
   colors.tokenColors[label as keyof typeof colors.tokenColors] ?? colors.border;
+
+const rewardStatusLabels: Record<RecentRewardStatus['status'], string> = {
+  completed: 'Completed',
+  stopped: 'Stopped clean',
+  slipped: 'Boundary slip logged',
+  expired: 'Expired',
+  in_progress: 'In progress',
+};
+
+const rewardSourceLabels: Record<RecentRewardStatus['source'], string> = {
+  bonus: 'Bonus chain',
+  spin: 'Wheel spin',
+};
+
+const rewardTierLabel = (tier: RecentRewardStatus['tier']): string =>
+  tier === 'unknown' ? 'Unknown tier' : `Tier ${tier}`;
 
 export default function StatsScreen() {
   const [timeframe, setTimeframe] = useState<StatsTimeframe>('7d');
@@ -238,6 +256,39 @@ export default function StatsScreen() {
           <Text key={bucket.label} muted>
             {bucket.label}: {bucket.count}
           </Text>
+        ))}
+      </Card>
+
+      <Card>
+        <Text variant="title">Recent rewards</Text>
+        {summary.recentRewardStatuses.length === 0 ? (
+          <Text muted>No reward grants yet.</Text>
+        ) : null}
+        {summary.recentRewardStatuses.map((rewardStatus) => (
+          <View
+            key={rewardStatus.id}
+            style={{
+              backgroundColor: colors.surfaceElevated,
+              borderColor: colors.border,
+              borderRadius: radius.sm,
+              borderWidth: 1,
+              gap: spacing.xs,
+              padding: spacing.sm,
+            }}
+          >
+            <Text>{rewardStatus.name}</Text>
+            <Text muted>
+              {rewardStatusLabels[rewardStatus.status]} - granted{' '}
+              {formatLocalDateTime(rewardStatus.grantedAt)}
+            </Text>
+            <Text muted>
+              {rewardSourceLabels[rewardStatus.source]} - {rewardTierLabel(rewardStatus.tier)}
+              {rewardStatus.durationMinutes ? ` - ${rewardStatus.durationMinutes} min` : ''}
+            </Text>
+            {rewardStatus.closedAt ? (
+              <Text muted>Closed {formatLocalDateTime(rewardStatus.closedAt)}</Text>
+            ) : null}
+          </View>
         ))}
       </Card>
 

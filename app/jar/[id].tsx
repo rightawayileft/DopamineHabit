@@ -63,8 +63,9 @@ export default function JarDetailScreen() {
       </Card>
 
       <Card>
-        <Text variant="title">Inventory</Text>
-        <TokenInventory tokens={jarTokens} />
+        <Text variant="title">Token ledger</Text>
+        <Text muted>Inventory stays spendable; cashed-in tokens remain here as history.</Text>
+        <TokenInventory tokens={jarTokens} showLedger />
       </Card>
 
       <Card>
