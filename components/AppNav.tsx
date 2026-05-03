@@ -2,7 +2,6 @@ import { router, usePathname } from 'expo-router';
 import { View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
-import { Text } from '@/components/ui/Text';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
@@ -37,7 +36,6 @@ export function AppNav() {
         padding: spacing.sm,
       }}
     >
-      <Text muted>Navigation</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {navItems.map((item) => {
           const current = isCurrentRoute(pathname, item.href);

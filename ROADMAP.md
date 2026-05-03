@@ -42,6 +42,7 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR20 trust and safety polish: ran agentic bugcheck personas, added Settings Data Status and import preview/confirmation, exposed persistence backend warnings, rejected raw JSON imports, repaired orphan/expired active reward sessions, confirmed reward/archive closures, protected first-rep handoff, and clarified reduced-motion/reward timer feedback.
 - PR21 trust ledgers and richer history: split jar token history from current inventory, added reward grant snapshots for historical name/tier/duration display, expanded reward grant why/closure rows, and surfaced recent reward statuses on Stats.
 - PR22 mature management polish: added searchable compact habit/reward/jar management lists, reusable selected filter chips, Stats filter search/limits for large setups, and jar milestone/fun-money ledgers.
+- PR23 first-loop comprehension and delight: ran four UX/product agents, simplified onboarding into a concrete first-trade flow, skipped check-in setup before the first reward, added loop-map orientation, made Home first-loop and returning-user states clearer, simplified the first spin, improved token/reward payoff copy, and added card/button hierarchy variants.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 

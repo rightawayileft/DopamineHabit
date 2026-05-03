@@ -33,6 +33,30 @@ export function GatePreviewCard({
       <Text variant="title">Your first gate</Text>
       <Text>{buildGatePreviewText({ habitCue, habitName, rewardDurationMinutes, rewardName })}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {[
+          { label: 'When', value: habitCue.trim() || 'the pull starts' },
+          { label: 'Do', value: habitName.trim() || 'one tiny rep' },
+          { label: 'Earn', value: `${rewardDurationMinutes || 3} min ${rewardName || 'reward'}` },
+        ].map((item) => (
+          <View
+            key={item.label}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radius.sm,
+              borderWidth: 1,
+              flexBasis: 120,
+              flexGrow: 1,
+              gap: spacing.xs,
+              padding: spacing.sm,
+            }}
+          >
+            <Text muted>{item.label}</Text>
+            <Text>{item.value}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         <View
           style={{
             backgroundColor: jarColorHex,

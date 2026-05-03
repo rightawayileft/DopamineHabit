@@ -4,6 +4,7 @@ import { AccessibilityInfo, View } from 'react-native';
 
 import { soundManager } from '@/audio/SoundManager';
 import { CashInPanel } from '@/components/CashInPanel';
+import { LoopMap } from '@/components/onboarding/LoopMap';
 import { Wheel } from '@/components/Wheel/Wheel';
 import { useSpinAnimation } from '@/components/Wheel/useSpinAnimation';
 import { type WheelSliceKind } from '@/components/Wheel/wheelGeometry';
@@ -113,6 +114,13 @@ export default function SpinScreen() {
     isCashInValid: cashIn.isValid,
     ...(cashIn.reason === undefined ? {} : { cashInReason: cashIn.reason }),
   });
+  const showSimpleFirstSpin = Boolean(
+    isBeforeFirstReward &&
+      latestCompletion &&
+      !pendingSpin &&
+      !activeRewardSession &&
+      cashIn.isValid,
+  );
 
   if (!nakedRuleAcceptedAt) {
     return <Redirect href="/onboarding/step1" />;
@@ -191,15 +199,18 @@ export default function SpinScreen() {
 
   return (
     <Screen>
-      <Card>
-        <Text variant="display">Spin</Text>
+      <Card tone={showSimpleFirstSpin ? 'hero' : 'default'}>
+        <Text variant="display">{showSimpleFirstSpin ? 'Spin for your reward.' : 'Spin'}</Text>
         <Text muted>
-          {isBeforeFirstReward
-            ? 'First spin: leave tokens unselected and earn the starter reward.'
+          {showSimpleFirstSpin
+            ? 'Your rep unlocked this spin. Tap once and the reward timer starts.'
+            : isBeforeFirstReward
+              ? 'Do one rep first. Your starter spin will not ask for token strategy.'
             : 'Spin now, or save matching tokens to activate higher tiers.'}
         </Text>
-        <Text muted>Locked Tier 2 or Tier 3 landings visibly fall through to Tier 1.</Text>
+        {showSimpleFirstSpin ? <LoopMap activeStep="spin" compact /> : null}
       </Card>
+      {!showSimpleFirstSpin ? (
       <Card>
         <Text variant="title">{firstSpinChecklist.title}</Text>
         <Text muted>{firstSpinChecklist.summary}</Text>
@@ -214,6 +225,7 @@ export default function SpinScreen() {
           ))}
         </View>
       </Card>
+      ) : null}
       {pendingSpin ? (
         <Card>
           <Text variant="title">Interrupted spin ready</Text>
@@ -244,17 +256,8 @@ export default function SpinScreen() {
           <Text muted>Complete a new habit rep before spinning.</Text>
         </Card>
       ) : null}
+      {!isBeforeFirstReward ? (
       <Card>
-        {isBeforeFirstReward ? (
-          <>
-            <Text variant="title">First reward path</Text>
-            <Text muted>
-              No cash-in needed yet. Keep the token you just earned; matching-token strategy
-              unlocks after the first reward.
-            </Text>
-            <Text muted>Tier 1 is active for this starter spin.</Text>
-          </>
-        ) : (
           <CashInPanel
             inventoryTokens={inventoryTokens}
             selectedTokens={selectedTokens}
@@ -264,8 +267,8 @@ export default function SpinScreen() {
             onToggleToken={toggleToken}
             onClear={() => setSelectedTokenIds([])}
           />
-        )}
       </Card>
+      ) : null}
       <Wheel
         activeTier={cashIn.activatedMaxTier}
         highlightedSlice={pendingSpin?.resolvedSpin.rawLandedSlice ?? latestSpinResult?.rawLandedSlice}
@@ -285,7 +288,11 @@ export default function SpinScreen() {
           {activeRewardSession && activeReward ? (
             <>
               <Button
-                label={`Open active reward: ${activeReward.name}`}
+                label={
+                  activeReward.durationMinutes
+                    ? `Start ${activeReward.durationMinutes}-minute ${activeReward.name}`
+                    : `Start ${activeReward.name}`
+                }
                 onPress={() =>
                   router.push({
                     pathname: '/reward/[id]',

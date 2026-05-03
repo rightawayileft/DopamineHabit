@@ -56,9 +56,9 @@ export default function IntegrityCheckInScreen() {
   return (
     <Screen>
       <Card>
-        <Text variant="display">Repair check-in</Text>
+        <Text variant="display">Daily reset</Text>
         <Text muted>
-          A daily no-shame repair ritual for checking whether the reward boundary held.
+          A daily no-shame check on whether rewards stayed inside the plan.
         </Text>
         <Text muted>Daily check-in time: {integrityCheckInTime}</Text>
       </Card>

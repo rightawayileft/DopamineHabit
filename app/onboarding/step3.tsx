@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 
 import { LoopProgressRail } from '@/components/onboarding/LoopProgressRail';
+import { LoopMap } from '@/components/onboarding/LoopMap';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FieldLabel } from '@/components/ui/FieldLabel';
@@ -36,12 +37,13 @@ export default function OnboardingStepThreeScreen() {
         <LoopProgressRail activeStep="checkin" />
       </Card>
       <Card>
-        <Text variant="display">Choose the repair check-in.</Text>
+        <Text variant="display">Add a gentle reset.</Text>
         <Text muted>
-          Once a day, DopamineHabit asks whether the gate stayed honest. This is a reset ritual,
-          not a grade.
+          After rewards begin, the daily check-in asks whether the gate stayed honest. It is a reset
+          ritual, not a grade.
         </Text>
-        <Button label="Use 9:00 PM" onPress={useDefaultTime} />
+        <LoopMap activeStep="reset" compact includeReset />
+        <Button label="Finish setup with 9:00 PM" onPress={useDefaultTime} />
       </Card>
       <Card>
         <Text variant="title">Customize check-in time</Text>

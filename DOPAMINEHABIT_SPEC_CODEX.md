@@ -29,7 +29,8 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 
 - Step 1 records Naked Rule acceptance.
 - Step 2 creates the first jar, habit, and Tier 1 reward from editable starter bundles, with a live gate preview.
-- Step 3 sets or accepts the daily check-in time as a no-shame repair ritual.
+- First-run setup should emphasize a concrete first trade: desired reward, tiny action, cue, and short timer.
+- Daily check-in and advanced jar/token concepts should not block the first reward loop.
 - A post-onboarding next step prioritizes starting the first rep and keeps extra setup available behind an optional customization affordance.
 - Onboarding creates the first loop, not the only loop. The app must make expansion discoverable immediately after setup.
 
@@ -41,6 +42,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Archiving prevents new completions but preserves historical completions.
 - Completing a habit creates an append-only `HabitCompletion` and a token tied to the habit jar.
 - Rate limiting must provide user-facing feedback instead of silently failing.
+- The first Home experience should focus on the current loop action rather than management, inventory, or integrity details.
 
 ### Jars, Tokens, Milestones, and Fun Money
 
@@ -57,6 +59,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 
 - No selected tokens activates Tier 1.
 - The first eligible spin must resolve into a starter reward path rather than a bonus detour.
+- The first spin should hide cash-in and tier strategy unless the user is blocked or past the first reward.
 - A single gold token activates Tier 3.
 - Two matching non-gold tokens activate Tier 2.
 - Three matching non-gold tokens activate Tier 3.
@@ -77,6 +80,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Active reward sessions block new spins until completed, stopped cleanly, logged as a slip, or expired.
 - Reward history should explain what was earned, when, why, and how the session closed.
 - Active reward screens should help users protect the granted session, mark it complete, stop clean, or log a boundary slip.
+- First reward closure copy should use plain user language while preserving completed, stopped, slipped, and expired outcomes.
 
 ### Management
 
@@ -105,6 +109,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Reminder scheduling should respect the check-in time where platform support allows.
 - Users should be able to enable or disable a gentle daily check-in reminder from Settings.
 - Missed or partial check-ins should be framed as useful recovery signals, not failure states.
+- Returning after multiple days away should show a no-shame re-entry brief with one recommended next action.
 
 ### Settings
 

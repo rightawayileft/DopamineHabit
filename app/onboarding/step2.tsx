@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { GatePreviewCard } from '@/components/onboarding/GatePreviewCard';
-import { LoopProgressRail } from '@/components/onboarding/LoopProgressRail';
+import { LoopMap } from '@/components/onboarding/LoopMap';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FieldLabel } from '@/components/ui/FieldLabel';
@@ -11,8 +11,6 @@ import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import {
-  quickHabitTemplates,
-  quickRewardTemplates,
   starterLoopBundles,
   type StarterLoopBundle,
 } from '@/game/firstLoopGuidance';
@@ -39,6 +37,7 @@ export default function OnboardingStepTwoScreen() {
     String(defaultBundle.rewardDurationMinutes),
   );
   const [rewardDescription, setRewardDescription] = useState(defaultBundle.rewardDescription);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const createInitialOnboardingSetup = useAppStore(
     (state) => state.createInitialOnboardingSetup,
   );
@@ -76,23 +75,21 @@ export default function OnboardingStepTwoScreen() {
       rewardDurationMinutes: durationAsNumber,
       rewardDescription,
     });
-    router.replace('/onboarding/step3');
+    router.replace('/onboarding/next');
   };
 
   return (
     <Screen>
-      <Card>
-        <LoopProgressRail activeStep="setup" />
-      </Card>
-      <Card>
-        <Text variant="display">Build one tiny gate.</Text>
+      <Card tone="hero">
+        <Text variant="display">Make your first trade.</Text>
         <Text muted>
-          Start from a bundle, then customize anything. The first loop should be small enough that
-          you do not have to bargain with it.
+          Fill in one sentence: I want a reward after I do one tiny action.
         </Text>
+        <LoopMap activeStep="pause" compact />
       </Card>
       <Card>
-        <Text variant="title">Starter bundles</Text>
+        <Text variant="title">Start with a ready-made loop</Text>
+        <Text muted>One tap fills the form. You can edit every word below.</Text>
         <View style={{ gap: spacing.sm }}>
           {starterLoopBundles.map((bundle) => {
             const selected = selectedBundleId === bundle.id;
@@ -101,7 +98,7 @@ export default function OnboardingStepTwoScreen() {
               <Button
                 key={bundle.id}
                 accessibilityState={{ selected }}
-                label={`${bundle.label}: ${bundle.summary}`}
+                label={`${selected ? 'Selected' : 'Use'}: ${bundle.label} - ${bundle.summary}`}
                 onPress={() => applyBundle(bundle)}
                 tone={selected ? 'primary' : 'secondary'}
               />
@@ -118,48 +115,8 @@ export default function OnboardingStepTwoScreen() {
         rewardName={rewardName}
       />
       <Card>
-        <Text variant="title">When the pull starts</Text>
-        <Text muted>This cue is the moment you want the gate to interrupt.</Text>
-        <FieldLabel>Cue</FieldLabel>
-        <Input
-          value={habitCue}
-          onChangeText={(nextCue) => {
-            setHabitCue(nextCue);
-            setSelectedBundleId('custom');
-          }}
-          placeholder="When I reach for my phone"
-        />
-      </Card>
-      <Card>
-        <Text variant="title">Tiny effort</Text>
-        <Text muted>The rep is not punishment. It is the pause that breaks autopilot.</Text>
-        <FieldLabel>Rep</FieldLabel>
-        <Input
-          value={habitName}
-          onChangeText={(nextHabitName) => {
-            setHabitName(nextHabitName);
-            setSelectedBundleId('custom');
-          }}
-          placeholder="Five slow breaths"
-        />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          {quickHabitTemplates.map((template) => (
-            <Button
-              key={template.id}
-              label={template.name}
-              onPress={() => {
-                setHabitName(template.name);
-                setHabitCue(template.cue);
-                setSelectedBundleId('custom');
-              }}
-              tone="secondary"
-            />
-          ))}
-        </View>
-      </Card>
-      <Card>
-        <Text variant="title">Reward window</Text>
-        <Text muted>Keep the first reward short. The timer protects the boundary.</Text>
+        <Text variant="title">First trade</Text>
+        <Text muted>Keep it small. You can customize more after the first reward pays off.</Text>
         <FieldLabel>Reward</FieldLabel>
         <Input
           value={rewardName}
@@ -168,6 +125,24 @@ export default function OnboardingStepTwoScreen() {
             setSelectedBundleId('custom');
           }}
           placeholder="Short scroll break"
+        />
+        <FieldLabel>After I do</FieldLabel>
+        <Input
+          value={habitName}
+          onChangeText={(nextHabitName) => {
+            setHabitName(nextHabitName);
+            setSelectedBundleId('custom');
+          }}
+          placeholder="Five slow breaths"
+        />
+        <FieldLabel>When</FieldLabel>
+        <Input
+          value={habitCue}
+          onChangeText={(nextCue) => {
+            setHabitCue(nextCue);
+            setSelectedBundleId('custom');
+          }}
+          placeholder="When I reach for my phone"
         />
         <FieldLabel>Minutes</FieldLabel>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -197,60 +172,47 @@ export default function OnboardingStepTwoScreen() {
           }}
           placeholder="3"
         />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          {quickRewardTemplates
-            .filter((template) => template.tier === 1)
-            .map((template) => (
+        <Button disabled={!canContinue} label="Start this loop" size="large" onPress={continueToTimer} />
+        <Button
+          label={showAdvanced ? 'Hide token jar settings' : 'Change token jar settings'}
+          tone="secondary"
+          onPress={() => setShowAdvanced((current) => !current)}
+        />
+      </Card>
+      {showAdvanced ? (
+        <Card>
+          <Text variant="title">Token jar</Text>
+          <Text muted>Tokens from this starter loop collect here. The default is fine.</Text>
+          <FieldLabel>Jar name</FieldLabel>
+          <Input
+            value={jarName}
+            onChangeText={(nextJarName) => {
+              setJarName(nextJarName);
+              setSelectedBundleId('custom');
+            }}
+            placeholder="Fitness"
+          />
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {jarColors.map((colorHex) => (
               <Button
-                key={template.id}
-                label={template.name}
+                key={colorHex}
+                accessibilityLabel={`Use jar color ${colorHex}`}
                 onPress={() => {
-                  setRewardName(template.name);
-                  setDurationMinutes(String(template.durationMinutes));
-                  setRewardDescription(template.description);
+                  setJarColorHex(colorHex);
                   setSelectedBundleId('custom');
                 }}
-                tone="secondary"
+                style={{
+                  backgroundColor: colorHex,
+                  borderColor: jarColorHex === colorHex ? colors.textPrimary : colorHex,
+                  borderRadius: radius.pill,
+                  height: 40,
+                  width: 40,
+                }}
               />
             ))}
-        </View>
-      </Card>
-      <Card>
-        <Text variant="title">Token jar</Text>
-        <Text muted>This is where proof from related reps collects.</Text>
-        <FieldLabel>Jar name</FieldLabel>
-        <Input
-          value={jarName}
-          onChangeText={(nextJarName) => {
-            setJarName(nextJarName);
-            setSelectedBundleId('custom');
-          }}
-          placeholder="Fitness"
-        />
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          {jarColors.map((colorHex) => (
-            <Button
-              key={colorHex}
-              accessibilityLabel={`Use jar color ${colorHex}`}
-              onPress={() => {
-                setJarColorHex(colorHex);
-                setSelectedBundleId('custom');
-              }}
-              style={{
-                backgroundColor: colorHex,
-                borderColor: jarColorHex === colorHex ? colors.textPrimary : colorHex,
-                borderRadius: radius.pill,
-                height: 40,
-                width: 40,
-              }}
-            />
-          ))}
-        </View>
-        <Text muted>
-          Bigger rewards, more jars, and more habits can wait until this first loop has paid off.
-        </Text>
-        <Button disabled={!canContinue} label="Continue" onPress={continueToTimer} />
-      </Card>
+          </View>
+        </Card>
+      ) : null}
     </Screen>
   );
 }

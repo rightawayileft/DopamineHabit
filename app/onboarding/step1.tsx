@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { LoopProgressRail } from '@/components/onboarding/LoopProgressRail';
+import { LoopMap } from '@/components/onboarding/LoopMap';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -22,19 +22,17 @@ export default function OnboardingStepOneScreen() {
 
   return (
     <Screen>
-      <Card>
-        <LoopProgressRail activeStep="rule" />
-      </Card>
-      <Card>
-        <Text variant="display">Try one gated reward loop.</Text>
+      <Card tone="hero">
+        <Text variant="display">Earn the reward first.</Text>
         <Text>
-          DopamineHabit is a self-honesty gate. It helps you pause, do one small effort, and earn
-          a timed reward without pretending the app can physically block you.
+          Pick a tempting reward. Do one tiny pause before it. Then spin to start a short,
+          guilt-free reward timer.
         </Text>
         <Text muted>
-          If the boundary breaks, you come back and reset without shame. The goal is a clean loop,
-          not perfect behavior.
+          It is a self-honesty tool. It will not physically block you; it gives you a clear ritual
+          to return to when autopilot takes over.
         </Text>
+        <LoopMap activeStep="pause" />
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: accepted }}
@@ -63,9 +61,9 @@ export default function OnboardingStepOneScreen() {
           >
             <Text style={{ color: colors.background }}>{accepted ? 'X' : ''}</Text>
           </View>
-          <Text>I want to try one loop.</Text>
+          <Text>I understand: this is a self-honesty gate, not a blocker.</Text>
         </Pressable>
-        <Button disabled={!accepted} label="Build my first gate" onPress={continueToSetup} />
+        <Button disabled={!accepted} label="Build my first reward loop" size="large" onPress={continueToSetup} />
       </Card>
     </Screen>
   );

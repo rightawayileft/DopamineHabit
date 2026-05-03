@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { soundManager } from '@/audio/SoundManager';
 import { HabitCard } from '@/components/HabitCard';
 import { FirstRepHero } from '@/components/onboarding/FirstRepHero';
+import { LoopMap } from '@/components/onboarding/LoopMap';
 import { TokenRevealCard } from '@/components/onboarding/TokenRevealCard';
 import { TokenInventory } from '@/components/TokenInventory';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { findCheckInForDate } from '@/game/integrity';
+import { buildReturnBrief } from '@/game/returnBrief';
 import { playHapticPattern } from '@/haptics/patterns';
 import { useTimer } from '@/hooks/useTimer';
 import { useAppStore } from '@/store';
@@ -31,6 +33,7 @@ export default function HomeScreen() {
   const activeRewardSession = useAppStore((state) => state.activeRewardSession);
   const lastCompletionFeedback = useAppStore((state) => state.lastCompletionFeedback);
   const integrityCheckInTime = useAppStore((state) => state.settings.integrityCheckInTime);
+  const lastSeenTimestamp = useAppStore((state) => state.integrityRuntime.lastSeenTimestamp);
   const checkInReminderEnabled = useAppStore(
     (state) => state.settings.checkInReminderEnabled,
   );
@@ -64,6 +67,10 @@ export default function HomeScreen() {
   const inventoryTokens = tokens.filter((token) => token.state === 'in_inventory');
   const todayCheckIn = findCheckInForDate(integrityCheckIns, toLocalDateKey());
   const spunCompletionIds = new Set(spinResults.map((spinResult) => spinResult.habitCompletionId));
+  const readyCompletion = completions
+    .slice()
+    .filter((completion) => !spunCompletionIds.has(completion.id))
+    .sort((left, right) => right.completedAt.localeCompare(left.completedAt))[0];
   const feedbackCanSpin =
     lastCompletionFeedback?.status === 'completed' &&
     lastCompletionFeedback.completionId !== undefined &&
@@ -71,6 +78,14 @@ export default function HomeScreen() {
   const hasRewardLoopStarted = rewardGrants.length > 0;
   const hasLoggedAnyRep = completions.length > 0;
   const showFirstRepHero = Boolean(firstHabit) && !hasLoggedAnyRep && !lastCompletionFeedback;
+  const showFirstLoopMode = !hasRewardLoopStarted;
+  const returnBrief = buildReturnBrief({
+    activeRewardSession,
+    completions,
+    integrityCheckIns,
+    inventoryTokens,
+    lastSeenTimestamp,
+  });
 
   const completeHabit = (habitId: string) => {
     const completion = logHabitCompletion({ habitId });
@@ -86,6 +101,60 @@ export default function HomeScreen() {
     void playHapticPattern('tokenDrawn', hapticsEnabled);
   };
 
+  if (showFirstLoopMode) {
+    return (
+      <Screen>
+        {showFirstRepHero && firstHabit ? (
+          <FirstRepHero
+            habit={firstHabit}
+            reward={firstReward}
+            onDone={() => completeHabit(firstHabit.id)}
+          />
+        ) : null}
+        {lastCompletionFeedback ? (
+          <TokenRevealCard
+            canSpin={feedbackCanSpin}
+            message={lastCompletionFeedback.message}
+            onSpin={() => router.push('/spin')}
+            title={lastCompletionFeedback.status === 'completed' ? 'Proof earned' : 'Not yet'}
+            tokenColor={lastCompletionFeedback.tokenColor}
+          />
+        ) : null}
+        {!showFirstRepHero && !lastCompletionFeedback ? (
+          <Card tone="hero">
+            <Text variant="display">Spin for the reward.</Text>
+            <Text muted>
+              Your tiny rep is logged. The next step is the spin that starts your timed reward.
+            </Text>
+            <LoopMap activeStep={readyCompletion ? 'token' : 'pause'} compact />
+            <Button
+              label={readyCompletion ? 'Spin now' : 'Do first rep'}
+              size="large"
+              onPress={() => {
+                if (readyCompletion) {
+                  router.push('/spin');
+                } else if (firstHabit) {
+                  completeHabit(firstHabit.id);
+                }
+              }}
+            />
+          </Card>
+        ) : null}
+        <Card>
+          <Text variant="title">Your starter reward</Text>
+          <Text muted>
+            {firstReward
+              ? `${firstReward.name}, ${firstReward.durationMinutes ?? 3} minutes`
+              : 'Create a reward to finish setup.'}
+          </Text>
+          <Text muted>
+            Everything else can wait until this first reward starts.
+          </Text>
+        </Card>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       {showFirstRepHero && firstHabit ? (
@@ -96,9 +165,19 @@ export default function HomeScreen() {
         />
       ) : null}
       {!showFirstRepHero ? (
-        <Card>
+        <Card tone={returnBrief.shouldShow ? 'hero' : 'default'}>
           <Text variant="title">DopamineHabit</Text>
           <Text muted>Do one rep, draw one token, then spin for the first reward.</Text>
+        </Card>
+      ) : null}
+      {returnBrief.shouldShow ? (
+        <Card tone="hero">
+          <Text variant="title">{returnBrief.title}</Text>
+          <Text muted>{returnBrief.message}</Text>
+          <Button
+            label={returnBrief.primaryLabel}
+            onPress={() => router.push(returnBrief.primaryRoute)}
+          />
         </Card>
       ) : null}
       {lastCompletionFeedback ? (

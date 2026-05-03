@@ -142,6 +142,16 @@ export default function StatsScreen() {
         </Text>
       </Card>
 
+      <Card tone="hero">
+        <Text variant="title">Next best action</Text>
+        <Text>{summary.nextAction.title}</Text>
+        <Text muted>{summary.nextAction.message}</Text>
+        <Button
+          label={summary.nextAction.label}
+          onPress={() => router.push(summary.nextAction.route)}
+        />
+      </Card>
+
       <Card>
         <Text variant="title">Focus</Text>
         <Text muted>{dashboard.activeFilterLabel}</Text>
@@ -193,16 +203,6 @@ export default function StatsScreen() {
             }}
           />
         ) : null}
-      </Card>
-
-      <Card>
-        <Text variant="title">Next best action</Text>
-        <Text>{summary.nextAction.title}</Text>
-        <Text muted>{summary.nextAction.message}</Text>
-        <Button
-          label={summary.nextAction.label}
-          onPress={() => router.push(summary.nextAction.route)}
-        />
       </Card>
 
       <Card>

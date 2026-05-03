@@ -44,9 +44,9 @@ const closedRewardCopy: Record<ClosedRewardState['mode'], { title: string; messa
 };
 
 const confirmClosureCopy: Record<Exclude<ClosedRewardState['mode'], 'expired'>, string> = {
-  completed: 'Confirm the reward stayed inside the boundary and is complete.',
-  stopped: 'Confirm you stopped early and kept the boundary clean.',
-  slipped: 'Confirm the reward escaped the boundary so the app can help you repair it.',
+  completed: 'Confirm you stopped on time and the reward is complete.',
+  stopped: 'Confirm you stopped early and want to close this reward cleanly.',
+  slipped: 'Confirm the reward went past the plan so today can reset cleanly.',
 };
 
 export default function RewardActiveScreen() {
@@ -198,10 +198,10 @@ export default function RewardActiveScreen() {
             <Button
               label={
                 pendingClosure === 'completed'
-                  ? 'Confirm complete'
+                  ? 'Done, I stopped on time'
                   : pendingClosure === 'stopped'
-                    ? 'Confirm stop clean'
-                    : 'Confirm boundary slip'
+                    ? 'I stopped early'
+                    : 'I went past the plan'
               }
               onPress={() => {
                 if (pendingClosure === 'completed') {
@@ -221,14 +221,14 @@ export default function RewardActiveScreen() {
           </View>
         ) : (
           <>
-            <Button label="Mark complete" onPress={() => setPendingClosure('completed')} />
+            <Button label="Done, I stopped on time" onPress={() => setPendingClosure('completed')} />
             <Button
-              label="Stop clean"
+              label="I stopped early"
               tone="secondary"
               onPress={() => setPendingClosure('stopped')}
             />
             <Button
-              label="Log boundary slip"
+              label="I went past the plan"
               tone="secondary"
               onPress={() => setPendingClosure('slipped')}
             />

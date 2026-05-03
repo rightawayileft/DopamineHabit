@@ -24,9 +24,10 @@ export function TokenRevealCard({
 }: TokenRevealCardProps) {
   return (
     <Card
+      tone={tokenColor ? 'success' : 'default'}
       style={{
-        backgroundColor: colors.surfaceElevated,
         borderColor: tokenColor ? colors.tokenColors[tokenColor] : colors.border,
+        gap: spacing.md,
       }}
     >
       <View style={{ alignItems: 'center', gap: spacing.sm }}>
@@ -37,9 +38,9 @@ export function TokenRevealCard({
             borderColor: colors.textPrimary,
             borderRadius: radius.pill,
             borderWidth: 2,
-            height: 72,
+            height: 96,
             justifyContent: 'center',
-            width: 72,
+            width: 96,
           }}
         >
           <Text style={{ color: colors.background, fontSize: 13 }}>
@@ -52,10 +53,13 @@ export function TokenRevealCard({
         </Text>
         {canSpin ? (
           <>
-            <Text muted style={{ textAlign: 'center' }}>
-              Saved. For the first loop, spin without cashing in tokens.
+            <Text style={{ color: colors.success, textAlign: 'center' }}>
+              Next: spin with this token safely stored.
             </Text>
-            <Button label="Spin now" onPress={onSpin} />
+            <Text muted style={{ textAlign: 'center' }}>
+              You do not spend tokens on the first reward. Matching-token strategy comes later.
+            </Text>
+            <Button label="Spin now" size="large" onPress={onSpin} />
           </>
         ) : null}
       </View>

@@ -19,9 +19,9 @@ export function FirstRepHero({ habit, onDone, reward }: FirstRepHeroProps) {
 
   return (
     <Card
+      tone="hero"
       style={{
-        backgroundColor: colors.surfaceElevated,
-        borderColor: colors.primary,
+        gap: spacing.md,
       }}
     >
       <View
@@ -38,15 +38,35 @@ export function FirstRepHero({ habit, onDone, reward }: FirstRepHeroProps) {
       <Text variant="display">{habit.name}</Text>
       {habit.cue ? <Text muted>When: {habit.cue}</Text> : null}
       <Text muted>
-        Do this once to draw a token. Then spin for{' '}
+        This is the whole first move. Do it once, get a token, then spin for{' '}
         {reward
           ? `${reward.durationMinutes ?? 3} minutes of ${reward.name}`
           : 'your first reward'}
         .
       </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {['Do rep', 'Reveal token', 'Spin'].map((label, index) => (
+          <View
+            key={label}
+            style={{
+              backgroundColor: index === 0 ? colors.primary : colors.surface,
+              borderColor: index === 0 ? colors.primary : colors.border,
+              borderRadius: radius.sm,
+              borderWidth: 1,
+              flexGrow: 1,
+              padding: spacing.sm,
+            }}
+          >
+            <Text style={{ color: index === 0 ? colors.background : colors.textMuted }}>
+              {index + 1}. {label}
+            </Text>
+          </View>
+        ))}
+      </View>
       <Button
         disabled={submitted}
         label={submitted ? 'Rep logged' : 'I did the rep'}
+        size="large"
         onPress={() => {
           setSubmitted(true);
           onDone();

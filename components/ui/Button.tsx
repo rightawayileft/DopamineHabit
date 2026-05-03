@@ -7,12 +7,14 @@ import { radius, spacing } from '@/theme/spacing';
 
 export interface ButtonProps extends PressableProps {
   label?: string;
+  size?: 'default' | 'compact' | 'large';
   tone?: 'primary' | 'secondary';
 }
 
 export function Button({
   children,
   label,
+  size = 'default',
   style,
   tone = 'primary',
   disabled,
@@ -21,6 +23,8 @@ export function Button({
 }: PropsWithChildren<ButtonProps>) {
   const backgroundColor = tone === 'primary' ? colors.primary : colors.surfaceElevated;
   const foregroundColor = tone === 'primary' ? colors.background : colors.textPrimary;
+  const minHeight = size === 'large' ? 56 : size === 'compact' ? 36 : 44;
+  const paddingVertical = size === 'large' ? spacing.md : size === 'compact' ? spacing.xs : spacing.sm;
 
   return (
     <Pressable
@@ -37,9 +41,9 @@ export function Button({
           borderRadius: radius.sm,
           borderWidth: 1,
           opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
-          minHeight: 44,
+          minHeight,
           paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
+          paddingVertical,
         },
         typeof style === 'function' ? style({ pressed }) : style,
       ]}

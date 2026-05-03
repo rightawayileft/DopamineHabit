@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { GatePreviewCard } from '@/components/onboarding/GatePreviewCard';
-import { LoopProgressRail } from '@/components/onboarding/LoopProgressRail';
+import { LoopMap } from '@/components/onboarding/LoopMap';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -40,18 +40,17 @@ export default function OnboardingNextScreen() {
 
   return (
     <Screen>
-      <Card>
-        <LoopProgressRail activeStep="rep" />
-      </Card>
-      <Card>
-        <Text variant="display">Launch the first loop.</Text>
+      <Card tone="hero">
+        <Text variant="display">Start with the rep.</Text>
         <Text muted>
-          Do the rep, earn the token, then spin. Extra setup can wait until the loop feels real.
+          Your setup is ready. The only thing to do now is the tiny rep. The app will reveal the
+          token and send you to the spin next.
         </Text>
+        <LoopMap activeStep="pause" compact />
         {message ? <Text style={{ color: colors.success }}>{message}</Text> : null}
-        <Button label="Do first rep" onPress={() => router.replace('/')} />
+        <Button label="Go to my first rep" size="large" onPress={() => router.replace('/')} />
         <Button
-          label={showMoreOptions ? 'Hide extra setup' : 'Customize more first'}
+          label={showMoreOptions ? 'Hide setup changes' : 'Change this setup'}
           tone="secondary"
           onPress={() => setShowMoreOptions((current) => !current)}
         />
@@ -137,10 +136,10 @@ export default function OnboardingNextScreen() {
         </Card>
       ) : null}
       <Card>
-        <Text variant="title">What is about to happen</Text>
-        <Text muted>The rep is the pause.</Text>
-        <Text muted>The token is proof that you paused.</Text>
-        <Text muted>The spin keeps the reward from being instant.</Text>
+        <Text variant="title">What happens next</Text>
+        <Text muted>1. Tap the rep only after you do it.</Text>
+        <Text muted>2. A token appears as proof.</Text>
+        <Text muted>3. Spin once for the first timed reward.</Text>
       </Card>
     </Screen>
   );

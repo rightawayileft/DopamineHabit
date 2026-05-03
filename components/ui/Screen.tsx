@@ -31,8 +31,8 @@ export function Screen({ children, centered = false, style }: PropsWithChildren<
       ]}
     >
       <View style={{ gap: spacing.lg, width: '100%', maxWidth: 680, alignSelf: 'center' }}>
-        {children}
         {showNav ? <AppNav /> : null}
+        {children}
       </View>
     </ScrollView>
   );
