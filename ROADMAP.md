@@ -41,23 +41,23 @@ This file is the current handoff map for local and cloud work. The product behav
 - PR19 recovery language and reward boundary support: guaranteed the first eligible spin stays on a starter reward path, added explicit completed/stopped/slipped/expired reward grant outcomes with migration support, made reward and check-in times human-readable, reframed check-ins as repair signals, and added clear next actions after boundary events.
 - PR20 trust and safety polish: ran agentic bugcheck personas, added Settings Data Status and import preview/confirmation, exposed persistence backend warnings, rejected raw JSON imports, repaired orphan/expired active reward sessions, confirmed reward/archive closures, protected first-rep handoff, and clarified reduced-motion/reward timer feedback.
 - PR21 trust ledgers and richer history: split jar token history from current inventory, added reward grant snapshots for historical name/tier/duration display, expanded reward grant why/closure rows, and surfaced recent reward statuses on Stats.
+- PR22 mature management polish: added searchable compact habit/reward/jar management lists, reusable selected filter chips, Stats filter search/limits for large setups, and jar milestone/fun-money ledgers.
 - Cloud deployment handoff: EAS project link, GitHub-triggered EAS deploy workflow, web export script, Vercel static config, and deployment notes.
 - Cloud deployment handoff follow-up: added `npm run handoff:cloud` verification gate and `CLOUD_DEPLOYMENT_HANDOFF.md` runbook for repeatable local-to-cloud transitions.
 
 ## Next Checkpoint
 
-PR22 should polish mature management and ledgers.
+Native readiness should prepare production builds and store polish.
 
 Recommended scope:
 
-- Add compact/searchable management views for mature setups with many habits, jars, and rewards.
-- Add scoped Stats filters that remain readable with larger data sets.
-- Expand milestone and fun-money ledgers so balance/progress changes are auditable.
-- Make selected controls and active filters visually consistent across Spin, Stats, and management.
+- Add EAS build profiles and validate Expo Go/native build assumptions.
+- Finalize app icon, splash, and store metadata.
+- Confirm notification permission behavior on native devices.
+- Run a mobile accessibility and small-screen visual pass.
 
 ## Later Checkpoints
 
-- PR22 mature management polish: compact/searchable management, scoped Stats filters, milestone/fun-money ledgers, consistent selected controls.
 - Native readiness: EAS build profiles, app icons/splash polish, notification permissions, and store metadata.
 
 ## Cloud Handoff Notes

@@ -1,3 +1,4 @@
+import { buildJarLedgers } from '@/game/jarLedgers';
 import { buildJarProgress, detectMilestoneUnlocks } from '@/game/milestones';
 import { useAppStore } from '@/store';
 import { resetPersistenceForTests } from '@/store/persistence';
@@ -78,6 +79,73 @@ describe('detectMilestoneUnlocks', () => {
       earnedTokenCount: 2,
       inventoryTokenCount: 1,
       tokensUntilNextMilestone: 8,
+    });
+  });
+
+  it('builds milestone and fun-money ledgers from jar token history', () => {
+    const jar: Jar = {
+      ...baseJar,
+      funMoneyEnabled: true,
+      funMoneyPerTokenCents: 75,
+      funMoneyBalanceCents: 150,
+      milestones: [
+        {
+          id: 'milestone-unlocked',
+          tokenThreshold: 1,
+          label: 'First token',
+          unlockedAt: '2026-04-23T12:01:00Z',
+        },
+        {
+          id: 'milestone-pending',
+          tokenThreshold: 3,
+          label: 'Third token',
+        },
+      ],
+    };
+    const tokens: Token[] = [
+      {
+        id: 'token-1',
+        color: 'blue',
+        earnedAt: '2026-04-23T12:00:00Z',
+        state: 'cashed_in',
+        jarId: 'jar-1',
+      },
+      {
+        id: 'token-2',
+        color: 'green',
+        earnedAt: '2026-04-23T12:02:00Z',
+        state: 'in_inventory',
+        jarId: 'jar-1',
+      },
+    ];
+
+    expect(buildJarLedgers(jar, tokens)).toMatchObject({
+      earnedTokenCount: 2,
+      funMoneyBalanceCents: 150,
+      funMoneyPerTokenCents: 75,
+      totalFunMoneyEntryCount: 2,
+      milestoneLedger: [
+        expect.objectContaining({
+          id: 'milestone-unlocked',
+          status: 'unlocked',
+          tokensRemaining: 0,
+        }),
+        expect.objectContaining({
+          id: 'milestone-pending',
+          status: 'pending',
+          tokensRemaining: 1,
+        }),
+      ],
+      recentFunMoneyEntries: [
+        expect.objectContaining({
+          id: 'token-2',
+          amountCents: 75,
+        }),
+        expect.objectContaining({
+          id: 'token-1',
+          amountCents: 75,
+        }),
+      ],
     });
   });
 

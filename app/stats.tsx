@@ -4,6 +4,8 @@ import { View, type DimensionValue } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { FilterChips, type FilterChipOption } from '@/components/ui/FilterChips';
+import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import {
@@ -23,6 +25,7 @@ const timeframes: { id: StatsTimeframe; label: string }[] = [
   { id: '30d', label: '30 days' },
   { id: 'all', label: 'All' },
 ];
+const visibleFilterLimit = 8;
 
 const tokenColor = (label: string): string =>
   colors.tokenColors[label as keyof typeof colors.tokenColors] ?? colors.border;
@@ -47,6 +50,7 @@ export default function StatsScreen() {
   const [timeframe, setTimeframe] = useState<StatsTimeframe>('7d');
   const [selectedHabitId, setSelectedHabitId] = useState<string | undefined>(undefined);
   const [selectedJarId, setSelectedJarId] = useState<string | undefined>(undefined);
+  const [focusSearchQuery, setFocusSearchQuery] = useState('');
   const nakedRuleAcceptedAt = useAppStore((state) => state.settings.nakedRuleAcceptedAt);
   const habits = useAppStore((state) => state.habits);
   const jars = useAppStore((state) => state.jars);
@@ -92,6 +96,33 @@ export default function StatsScreen() {
   const activeHabits = habits.filter(
     (habit) => !habit.archivedAt && activeJarIds.has(habit.jarId),
   );
+  const normalizedFocusSearchQuery = focusSearchQuery.trim().toLowerCase();
+  const matchesFocusSearch = (value: string): boolean =>
+    normalizedFocusSearchQuery.length === 0 ||
+    value.toLowerCase().includes(normalizedFocusSearchQuery);
+  const visibleJars = activeJars
+    .filter((jar) => matchesFocusSearch(jar.name) || jar.id === selectedJarId)
+    .slice(0, visibleFilterLimit);
+  const visibleHabits = activeHabits
+    .filter((habit) => {
+      const jar = jars.find((candidate) => candidate.id === habit.jarId);
+
+      return (
+        habit.id === selectedHabitId ||
+        matchesFocusSearch(habit.name) ||
+        matchesFocusSearch(jar?.name ?? '')
+      );
+    })
+    .slice(0, visibleFilterLimit);
+  const timeframeOptions: FilterChipOption<StatsTimeframe>[] = timeframes;
+  const jarFilterOptions: FilterChipOption<string>[] = [
+    { id: 'all', label: 'All jars', detail: `${activeJars.length}` },
+    ...visibleJars.map((jar) => ({ id: jar.id, label: jar.name })),
+  ];
+  const habitFilterOptions: FilterChipOption<string>[] = [
+    { id: 'all', label: 'All habits', detail: `${activeHabits.length}` },
+    ...visibleHabits.map((habit) => ({ id: habit.id, label: habit.name })),
+  ];
   const maxTrendCount = Math.max(
     1,
     ...dashboard.completionTrend.map((bucket) => bucket.completionCount),
@@ -114,46 +145,54 @@ export default function StatsScreen() {
       <Card>
         <Text variant="title">Focus</Text>
         <Text muted>{dashboard.activeFilterLabel}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          {timeframes.map((candidate) => (
-            <Button
-              key={candidate.id}
-              label={candidate.label}
-              tone={timeframe === candidate.id ? 'primary' : 'secondary'}
-              onPress={() => setTimeframe(candidate.id)}
-            />
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        <Input
+          value={focusSearchQuery}
+          onChangeText={setFocusSearchQuery}
+          placeholder="Find jar or habit filters"
+        />
+        <Text muted>
+          Showing {visibleJars.length} of {activeJars.length} jars and {visibleHabits.length} of{' '}
+          {activeHabits.length} habits.
+        </Text>
+        <FilterChips
+          label="Timeframe"
+          options={timeframeOptions}
+          selectedId={timeframe}
+          onSelect={setTimeframe}
+        />
+        <FilterChips
+          label="Jars"
+          options={jarFilterOptions}
+          selectedId={selectedJarId ?? 'all'}
+          onSelect={(jarId) => {
+            const nextJarId = jarId === 'all' ? undefined : jarId;
+            const selectedHabit = selectedHabitId
+              ? activeHabits.find((habit) => habit.id === selectedHabitId)
+              : undefined;
+
+            setSelectedJarId(nextJarId);
+            if (nextJarId && selectedHabit && selectedHabit.jarId !== nextJarId) {
+              setSelectedHabitId(undefined);
+            }
+          }}
+        />
+        <FilterChips
+          label="Habits"
+          options={habitFilterOptions}
+          selectedId={selectedHabitId ?? 'all'}
+          onSelect={(habitId) => setSelectedHabitId(habitId === 'all' ? undefined : habitId)}
+        />
+        {selectedJarId || selectedHabitId || focusSearchQuery ? (
           <Button
-            label="All jars"
-            tone={selectedJarId === undefined ? 'primary' : 'secondary'}
-            onPress={() => setSelectedJarId(undefined)}
+            label="Clear focus"
+            tone="secondary"
+            onPress={() => {
+              setSelectedJarId(undefined);
+              setSelectedHabitId(undefined);
+              setFocusSearchQuery('');
+            }}
           />
-          {activeJars.map((jar) => (
-            <Button
-              key={jar.id}
-              label={jar.name}
-              tone={selectedJarId === jar.id ? 'primary' : 'secondary'}
-              onPress={() => setSelectedJarId(jar.id)}
-            />
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <Button
-            label="All habits"
-            tone={selectedHabitId === undefined ? 'primary' : 'secondary'}
-            onPress={() => setSelectedHabitId(undefined)}
-          />
-          {activeHabits.map((habit) => (
-            <Button
-              key={habit.id}
-              label={habit.name}
-              tone={selectedHabitId === habit.id ? 'primary' : 'secondary'}
-              onPress={() => setSelectedHabitId(habit.id)}
-            />
-          ))}
-        </View>
+        ) : null}
       </Card>
 
       <Card>

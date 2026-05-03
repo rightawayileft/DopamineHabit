@@ -51,6 +51,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Milestones unlock when earned token count reaches their threshold.
 - Custom milestones added below the current earned-token count should unlock immediately.
 - Optional fun-money balances accrue from earned tokens when enabled.
+- Jar detail should expose milestone and fun-money ledgers that explain progress, balance, and recent token deposits.
 
 ### Cash-In and Spin
 
@@ -76,6 +77,13 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Active reward sessions block new spins until completed, stopped cleanly, logged as a slip, or expired.
 - Reward history should explain what was earned, when, why, and how the session closed.
 - Active reward screens should help users protect the granted session, mark it complete, stop clean, or log a boundary slip.
+
+### Management
+
+- Manage should provide direct entry points for habits, rewards, jars, settings, and stats.
+- Users should be able to add more habits, rewards, and jars after onboarding.
+- Archived items should remain restorable where history depends on them.
+- Mature management views should be searchable, filterable, and compact enough for many habits, rewards, and jars.
 - Reward closure actions should require deliberate confirmation, and expired or orphaned sessions should recover without blocking new spins.
 
 ### Bonus Rounds
@@ -112,6 +120,7 @@ The product should feel clear, recoverable, and no-shame. It should reward hones
 - Stats should summarize setup, reps, tokens, spins, reward grants, milestones, fun money, integrity, and next best action.
 - Stats must be useful with zero data, early data, and mature data.
 - Stats should support timeframe, jar, and habit filters for focused progress review.
+- Stats filter controls should stay usable when many jars or habits exist.
 - Stats should translate raw local data into coaching cues, visible rhythm, and reward-energy signals.
 - Stats should surface recent reward statuses and closure outcomes in human-readable form.
 

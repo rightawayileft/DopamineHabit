@@ -6,6 +6,8 @@ import { RewardForm } from '@/components/management/ManagementForms';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ConfirmActionButton } from '@/components/ui/ConfirmActionButton';
+import { FilterChips, type FilterChipOption } from '@/components/ui/FilterChips';
+import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { quickRewardTemplates } from '@/game/firstLoopGuidance';
@@ -83,6 +85,14 @@ const rewardSourceLabel: Record<RewardGrant['source'], string> = {
 const shortRecordId = (id: string): string => (id.length > 8 ? id.slice(0, 8) : id);
 
 type RewardClosureMode = 'completed' | 'stopped' | 'slipped';
+type RewardView = 'active' | 'archived' | 'grants' | 'all';
+
+const rewardViewOptions: FilterChipOption<RewardView>[] = [
+  { id: 'active', label: 'Active' },
+  { id: 'archived', label: 'Archived' },
+  { id: 'grants', label: 'Grants' },
+  { id: 'all', label: 'All' },
+];
 
 const rewardClosurePrompt: Record<RewardClosureMode, string> = {
   completed: 'Confirm this reward stayed inside the boundary and is complete.',
@@ -110,6 +120,8 @@ export default function RewardsScreen() {
   const syncRewardSessionState = useAppStore((state) => state.syncRewardSessionState);
   const [editingRewardId, setEditingRewardId] = useState<string | undefined>(undefined);
   const [pendingClosure, setPendingClosure] = useState<RewardClosureMode | undefined>(undefined);
+  const [rewardView, setRewardView] = useState<RewardView>('active');
+  const [searchQuery, setSearchQuery] = useState('');
   const [lastClosure, setLastClosure] = useState<
     { mode: RewardClosureMode; rewardName: string } | undefined
   >(undefined);
@@ -132,6 +144,28 @@ export default function RewardsScreen() {
     .sort((left, right) => right.grantedAt.localeCompare(left.grantedAt));
   const activeRewards = rewards.filter((reward) => !reward.archivedAt);
   const archivedRewards = rewards.filter((reward) => reward.archivedAt);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const matchesText = (value: string): boolean =>
+    normalizedSearchQuery.length === 0 || value.toLowerCase().includes(normalizedSearchQuery);
+  const matchesReward = (reward: Reward): boolean =>
+    [reward.name, reward.description ?? '', `${reward.tier}`].some(matchesText);
+  const matchesGrant = (grant: RewardGrant): boolean => {
+    const reward = rewards.find((candidate) => candidate.id === grant.rewardId);
+
+    return [
+      grantRewardName(grant, reward),
+      grantStatusLabel(grant),
+      rewardSourceLabel[grant.source],
+      grant.spinResultId ?? '',
+      grant.bonusChainId ?? '',
+    ].some(matchesText);
+  };
+  const visibleActiveRewards = activeRewards.filter(matchesReward);
+  const visibleArchivedRewards = archivedRewards.filter(matchesReward);
+  const visibleGrants = sortedGrants.filter(matchesGrant);
+  const shouldShowActive = rewardView === 'active' || rewardView === 'all';
+  const shouldShowArchived = rewardView === 'archived' || rewardView === 'all';
+  const shouldShowGrants = rewardView === 'grants' || rewardView === 'all';
 
   const closeActiveReward = (mode: RewardClosureMode) => {
     if (!activeGrant || !activeReward) {
@@ -219,6 +253,24 @@ export default function RewardsScreen() {
       )}
 
       <Card>
+        <Text variant="title">Find rewards</Text>
+        <Input
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search rewards or grant history"
+        />
+        <FilterChips
+          options={rewardViewOptions}
+          selectedId={rewardView}
+          onSelect={setRewardView}
+        />
+        <Text muted>
+          Showing {visibleActiveRewards.length} active, {visibleArchivedRewards.length} archived,{' '}
+          {visibleGrants.length} grants.
+        </Text>
+      </Card>
+
+      <Card>
         <Text variant="title">Add reward</Text>
         <Text muted>
           Rewards are the timed sessions the wheel can grant. Tiers let better cash-ins unlock
@@ -261,63 +313,88 @@ export default function RewardsScreen() {
         </View>
       </Card>
 
-      {activeRewards.length === 0 ? (
+      {shouldShowActive && visibleActiveRewards.length === 0 ? (
         <Card>
-          <Text variant="title">No active rewards</Text>
-          <Text muted>Create or restore a reward before spinning for rewards.</Text>
+          <Text variant="title">No active matches</Text>
+          <Text muted>Create, restore, or clear search to see active rewards.</Text>
         </Card>
       ) : null}
 
-      {activeRewards.map((reward) => (
-        <Card key={reward.id}>
-          <Text variant="title">{reward.name}</Text>
-          <Text muted>Tier {reward.tier}</Text>
-          {reward.durationMinutes ? <Text muted>{reward.durationMinutes} minutes</Text> : null}
-          {reward.description ? <Text muted>{reward.description}</Text> : null}
-          {editingRewardId === reward.id ? (
-            <RewardForm
-              initialReward={reward}
-              submitLabel="Save reward"
-              onSubmit={(input) => {
-                updateReward({ ...input, id: reward.id });
-                setEditingRewardId(undefined);
+      {shouldShowActive && visibleActiveRewards.length > 0 ? (
+        <Card>
+          <Text variant="title">Active rewards</Text>
+          {visibleActiveRewards.map((reward) => (
+            <View
+              key={reward.id}
+              style={{
+                backgroundColor: colors.surfaceElevated,
+                borderColor: colors.border,
+                borderRadius: radius.sm,
+                borderWidth: 1,
+                gap: spacing.xs,
+                padding: spacing.sm,
               }}
-            />
-          ) : (
-            <Button
-              label="Edit"
-              tone="secondary"
-              onPress={() => setEditingRewardId(reward.id)}
-            />
-          )}
-          <ConfirmActionButton
-            label="Archive"
-            confirmLabel="Confirm archive reward"
-            message="This hides the reward from new spins but keeps old grant history."
-            onConfirm={() => archiveReward(reward.id)}
-          />
+            >
+              <Text>{reward.name}</Text>
+              <Text muted>Tier {reward.tier}</Text>
+              {reward.durationMinutes ? <Text muted>{reward.durationMinutes} minutes</Text> : null}
+              {reward.description ? <Text muted>{reward.description}</Text> : null}
+              {editingRewardId === reward.id ? (
+                <RewardForm
+                  initialReward={reward}
+                  submitLabel="Save reward"
+                  onSubmit={(input) => {
+                    updateReward({ ...input, id: reward.id });
+                    setEditingRewardId(undefined);
+                  }}
+                />
+              ) : (
+                <Button
+                  label="Edit"
+                  tone="secondary"
+                  onPress={() => setEditingRewardId(reward.id)}
+                />
+              )}
+              <ConfirmActionButton
+                label="Archive"
+                confirmLabel="Confirm archive reward"
+                message="This hides the reward from new spins but keeps old grant history."
+                onConfirm={() => archiveReward(reward.id)}
+              />
+            </View>
+          ))}
         </Card>
-      ))}
+      ) : null}
 
-      {archivedRewards.length > 0 ? (
+      {shouldShowArchived && visibleArchivedRewards.length > 0 ? (
         <Card>
           <Text variant="title">Archived rewards</Text>
           <Text muted>Archived rewards stay attached to old grants.</Text>
+          {visibleArchivedRewards.map((reward) => (
+            <View
+              key={reward.id}
+              style={{
+                backgroundColor: colors.surfaceElevated,
+                borderColor: colors.border,
+                borderRadius: radius.sm,
+                borderWidth: 1,
+                gap: spacing.xs,
+                padding: spacing.sm,
+              }}
+            >
+              <Text>{reward.name}</Text>
+              <Text muted>Archived {formatLocalDateTime(reward.archivedAt)}</Text>
+              <Button label="Restore" tone="secondary" onPress={() => restoreReward(reward.id)} />
+            </View>
+          ))}
         </Card>
       ) : null}
 
-      {archivedRewards.map((reward) => (
-        <Card key={reward.id}>
-          <Text variant="title">{reward.name}</Text>
-          <Text muted>Archived {formatLocalDateTime(reward.archivedAt)}</Text>
-          <Button label="Restore" tone="secondary" onPress={() => restoreReward(reward.id)} />
-        </Card>
-      ))}
-
+      {shouldShowGrants ? (
       <Card>
         <Text variant="title">Grant history</Text>
-        {sortedGrants.length === 0 ? <Text muted>No grants yet.</Text> : null}
-        {sortedGrants.map((grant) => {
+        {visibleGrants.length === 0 ? <Text muted>No grant matches yet.</Text> : null}
+        {visibleGrants.map((grant) => {
           const reward = rewards.find((candidate) => candidate.id === grant.rewardId);
           const status = grantStatusLabel(grant);
           const rewardName = grantRewardName(grant, reward);
@@ -358,6 +435,7 @@ export default function RewardsScreen() {
           );
         })}
       </Card>
+      ) : null}
     </Screen>
   );
 }
